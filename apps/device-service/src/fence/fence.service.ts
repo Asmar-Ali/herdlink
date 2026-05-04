@@ -4,7 +4,7 @@ import { UpdateFenceDto } from './dto/update-fence.dto';
 
 @Injectable()
 export class FenceService {
-  create(createFenceDto: CreateFenceDto) {
+  create(_createFenceDto: CreateFenceDto) {
     return 'This action adds a new fence';
   }
 
@@ -16,7 +16,7 @@ export class FenceService {
     return `This action returns a #${id} fence`;
   }
 
-  update(id: number, updateFenceDto: UpdateFenceDto) {
+  update(id: number, _updateFenceDto: UpdateFenceDto) {
     return `This action updates a #${id} fence`;
   }
 

@@ -6,4 +6,3 @@ import { FenceModule } from './fence/fence.module';
   imports: [DeviceModule, FenceModule],
 })
 export class AppModule {}
-

@@ -23,9 +23,20 @@ The same architecture, with different domain logic, applies to fintech transacti
 
 ## Quickstart
 
+**Today (device-service only):**
+
 ```bash
 git clone https://github.com/asmar-ali/herdlink.git
 cd herdlink
+npm install
+npm run start:dev
+```
+
+`device-service` listens on `http://localhost:3000` by default (`PORT` overrides).
+
+**Full stack (when `docker-compose.yml` lands):**
+
+```bash
 docker compose up
 ```
 

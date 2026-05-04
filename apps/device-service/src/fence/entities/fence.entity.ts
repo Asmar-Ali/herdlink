@@ -4,14 +4,14 @@ import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document } from 'mongoose';
 
 export enum GeofenceType {
-  INCLUSION = 'INCLUSION',  // devices SHOULD be inside (safe paddock)
-  EXCLUSION = 'EXCLUSION',  // devices SHOULD NOT be inside (road, river, neighbour's land)
+  INCLUSION = 'INCLUSION', // devices SHOULD be inside (safe paddock)
+  EXCLUSION = 'EXCLUSION', // devices SHOULD NOT be inside (road, river, neighbour's land)
 }
 
 export enum BreachDirection {
-  ENTER = 'ENTER',          // alert when device crosses INTO the polygon
-  EXIT  = 'EXIT',           // alert when device crosses OUT of the polygon
-  BOTH  = 'BOTH'
+  ENTER = 'ENTER', // alert when device crosses INTO the polygon
+  EXIT = 'EXIT', // alert when device crosses OUT of the polygon
+  BOTH = 'BOTH',
 }
 
 // MongoDB stores polygons as GeoJSON natively, with proper geospatial indexing.
@@ -31,7 +31,7 @@ const GeoJSONPolygonSchema = SchemaFactory.createForClass(GeoJSONPolygon);
 
 @Schema({
   collection: 'geofences',
-  timestamps: true,  // adds createdAt + updatedAt
+  timestamps: true, // adds createdAt + updatedAt
 })
 export class Geofence {
   @Prop({ required: true, trim: true, maxlength: 120 })
@@ -43,7 +43,11 @@ export class Geofence {
   @Prop({ enum: GeofenceType, required: true })
   type: GeofenceType;
 
-  @Prop({ enum: BreachDirection, required: true, default: BreachDirection.BOTH })
+  @Prop({
+    enum: BreachDirection,
+    required: true,
+    default: BreachDirection.BOTH,
+  })
   breachDirection: BreachDirection;
 
   // The polygon itself — uses GeoJSON so MongoDB's $geoIntersects / $geoWithin work natively.

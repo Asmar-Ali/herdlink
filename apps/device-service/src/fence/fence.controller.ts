@@ -1,4 +1,12 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+} from '@nestjs/common';
 import { FenceService } from './fence.service';
 import { CreateFenceDto } from './dto/create-fence.dto';
 import { UpdateFenceDto } from './dto/update-fence.dto';

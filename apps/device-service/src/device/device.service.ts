@@ -4,7 +4,7 @@ import { UpdateDeviceDto } from './dto/update-device.dto';
 
 @Injectable()
 export class DeviceService {
-  create(createDeviceDto: CreateDeviceDto) {
+  create(_createDeviceDto: CreateDeviceDto) {
     return 'This action adds a new device';
   }
 
@@ -16,7 +16,7 @@ export class DeviceService {
     return `This action returns a #${id} device`;
   }
 
-  update(id: number, updateDeviceDto: UpdateDeviceDto) {
+  update(id: number, _updateDeviceDto: UpdateDeviceDto) {
     return `This action updates a #${id} device`;
   }
 

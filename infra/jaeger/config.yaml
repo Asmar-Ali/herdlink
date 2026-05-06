@@ -1,0 +1,52 @@
+service:
+  extensions: [jaeger_storage, jaeger_query]
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [jaeger_storage_exporter]
+  telemetry:
+    resource:
+      service.name: jaeger
+    metrics:
+      level: detailed
+      readers:
+        - pull:
+            exporter:
+              prometheus:
+                host: 0.0.0.0
+                port: 8888
+
+extensions:
+  jaeger_query:
+    storage:
+      traces: memstore
+      metrics: prom_metrics
+  jaeger_storage:
+    backends:
+      memstore:
+        memory:
+          max_traces: 100000
+    metric_backends:
+      prom_metrics:
+        prometheus:
+          endpoint: http://prometheus:9090
+          normalize_calls: true
+          normalize_duration: true
+
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+processors:
+  batch:
+    timeout: 1s
+    send_batch_size: 1024
+
+exporters:
+  jaeger_storage_exporter:
+    trace_storage: memstore

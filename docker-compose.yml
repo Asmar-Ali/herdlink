@@ -65,7 +65,7 @@ services:
       POSTGRES_PASSWORD: herdlink_dev
       POSTGRES_DB: herdlink
     volumes:
-      - timescale-data:/var/lib/postgresql/data
+      - timescale-data:/var/lib/postgresql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U herdlink -d herdlink"]
       interval: 10s
@@ -243,9 +243,9 @@ services:
       - "4317:4317"     # OTLP gRPC receiver
       - "4318:4318"     # OTLP HTTP receiver
     volumes:
-      - ./infra/jaeger/config.yaml:/etc/jaeger/config.yaml:ro
+      - ./infra/jaeger/config.yaml:/tmp/jaeger-config.yaml:ro
       - jaeger-data:/data
-    command: ["--config", "/etc/jaeger/config.yaml"]
+    command: ["--config", "/tmp/jaeger-config.yaml"]
 
   # ─── DEVELOPER UIs ──────────────────────────────────────────────────────────
   # Optional but high-value during development. Comment any out if you want a

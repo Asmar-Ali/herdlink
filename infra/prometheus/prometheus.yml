@@ -1,0 +1,51 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Prometheus scrape config for HerdLink.
+# Application services will be added here as they're built — each one exposes
+# /metrics on its own port. For now we scrape Prometheus itself plus the
+# infrastructure services that already export Prometheus metrics natively.
+# ─────────────────────────────────────────────────────────────────────────────
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    environment: dev
+    cluster: herdlink-local
+
+scrape_configs:
+
+  - job_name: prometheus
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # ── Application services (commented out until they exist) ─────────────────
+  # Uncomment as each service comes online. Each service exposes /metrics on
+  # its own port — convention is 9000 + service number.
+  #
+  # - job_name: device-service
+  #   static_configs:
+  #     - targets: ['device-service:9001']
+  #
+  # - job_name: mqtt-bridge
+  #   static_configs:
+  #     - targets: ['mqtt-bridge:9002']
+  #
+  # - job_name: ingestion-service
+  #   static_configs:
+  #     - targets: ['ingestion-service:9003']
+  #
+  # - job_name: geofence-engine
+  #   static_configs:
+  #     - targets: ['geofence-engine:9004']
+  #
+  # - job_name: alerting-service
+  #   static_configs:
+  #     - targets: ['alerting-service:9005']
+  #
+  # - job_name: realtime-gateway
+  #   static_configs:
+  #     - targets: ['realtime-gateway:9006']
+  #
+  # - job_name: dashboard-api
+  #   static_configs:
+  #     - targets: ['dashboard-api:9007']

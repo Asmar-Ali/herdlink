@@ -1,0 +1,18 @@
+# Auto-provision Prometheus as a Grafana datasource on startup.
+# Grafana picks this up from /etc/grafana/provisioning/datasources/ on boot.
+
+apiVersion: 1
+
+datasources:
+  - name: Prometheus
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    isDefault: true
+    editable: true
+
+  - name: Jaeger
+    type: jaeger
+    access: proxy
+    url: http://jaeger:16686
+    editable: true

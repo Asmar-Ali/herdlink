@@ -6,12 +6,13 @@ import {
   Patch,
   Param,
   Delete,
+  Version
 } from '@nestjs/common';
 import { FenceService } from './fence.service';
 import { CreateFenceDto } from './dto/create-fence.dto';
 import { UpdateFenceDto } from './dto/update-fence.dto';
 
-@Controller('fence')
+@Controller({ path: 'fence', version: '1' })
 export class FenceController {
   constructor(private readonly fenceService: FenceService) {}
 

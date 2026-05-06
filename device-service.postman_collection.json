@@ -1,0 +1,234 @@
+{
+  "info": {
+    "name": "HerdLink Device Service",
+    "_postman_id": "f5cf73d3-8443-4f1f-b890-8ecce7a2ca76",
+    "description": "Collection for current device-service endpoints (device + fence).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Device",
+      "item": [
+        {
+          "name": "Create Device",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"serialNumber\": \"SN-0001\",\n  \"name\": \"Cow #142\",\n  \"type\": \"COLLAR_V1\",\n  \"status\": \"INACTIVE\",\n  \"herdId\": \"herd-1\",\n  \"lastLatitude\": 0,\n  \"lastLongitude\": 0,\n  \"lastSeenAt\": \"2026-01-01T00:00:00.000Z\",\n  \"batteryLevel\": 100,\n  \"metadata\": {\n    \"firmware\": \"1.0.0\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/{{devicePath}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "{{devicePath}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get All Devices",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/{{devicePath}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "{{devicePath}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Device By ID",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/{{devicePath}}/{{id}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "{{devicePath}}",
+                "{{id}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Update Device",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Cow #142 (updated)\",\n  \"batteryLevel\": 92,\n  \"metadata\": {\n    \"firmware\": \"1.0.1\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/{{devicePath}}/{{id}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "{{devicePath}}",
+                "{{id}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Delete Device",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{baseUrl}}/{{devicePath}}/{{id}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "{{devicePath}}",
+                "{{id}}"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Fence",
+      "item": [
+        {
+          "name": "Create Fence",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/{{fencePath}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "{{fencePath}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get All Fences",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/{{fencePath}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "{{fencePath}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Fence By ID",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/{{fencePath}}/{{id}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "{{fencePath}}",
+                "{{id}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Update Fence",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/{{fencePath}}/{{id}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "{{fencePath}}",
+                "{{id}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Delete Fence",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{baseUrl}}/{{fencePath}}/{{id}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "{{fencePath}}",
+                "{{id}}"
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000"
+    },
+    {
+      "key": "devicePath",
+      "value": "device"
+    },
+    {
+      "key": "fencePath",
+      "value": "fence"
+    },
+    {
+      "key": "id",
+      "value": "1"
+    }
+  ]
+}

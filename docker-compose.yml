@@ -1,0 +1,271 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# HerdLink — local development infrastructure
+#
+# What's here: every stateful service the platform needs (databases, brokers,
+# observability). What's NOT here: the application services themselves —
+# device-service, mqtt-bridge, geofence-engine, etc. We'll add those as we
+# build them in subsequent weeks. This file is the stable foundation.
+#
+# Quickstart:
+#   docker compose up                # start everything
+#   docker compose up -d             # start in background
+#   docker compose ps                # see what's running and healthy
+#   docker compose down              # stop, keep volumes (data persists)
+#   docker compose down -v           # stop, wipe volumes (clean slate)
+#   docker compose logs -f kafka     # tail logs for one service
+#
+# Host ports map to convention defaults — no surprises:
+#   5432  PostgreSQL/Timescale
+#   27017 MongoDB
+#   6379  Redis
+#   9092  Kafka (external)
+#   8081  Schema Registry
+#   1883  MQTT
+#   9090  Prometheus
+#   3001  Grafana          (3000 left free for dashboard-ui later)
+#   16686 Jaeger UI
+#   4317  Jaeger OTLP gRPC
+#   4318  Jaeger OTLP HTTP
+#   8080  Kafka UI
+#   8082  mongo-express
+#   8083  pgAdmin
+# ─────────────────────────────────────────────────────────────────────────────
+
+name: herdlink
+
+networks:
+  herdlink:
+    driver: bridge
+
+volumes:
+  timescale-data:
+  mongo-data:
+  redis-data:
+  kafka-data:
+  prometheus-data:
+  grafana-data:
+  jaeger-data:
+  pgadmin-data:
+  mosquitto-data:
+  mosquitto-log:
+
+services:
+
+  # ─── DATA STORES ────────────────────────────────────────────────────────────
+
+  timescaledb:
+    image: timescale/timescaledb:latest-pg18
+    container_name: herdlink-timescale
+    restart: unless-stopped
+    networks: [herdlink]
+    ports:
+      - "5430:5430"
+    environment:
+      POSTGRES_USER: herdlink
+      POSTGRES_PASSWORD: herdlink_dev
+      POSTGRES_DB: herdlink
+    volumes:
+      - timescale-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U herdlink -d herdlink"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  mongodb:
+    image: mongo:8
+    container_name: herdlink-mongo
+    restart: unless-stopped
+    networks: [herdlink]
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: herdlink
+      MONGO_INITDB_ROOT_PASSWORD: herdlink_dev
+      MONGO_INITDB_DATABASE: herdlink
+    volumes:
+      - mongo-data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  redis:
+    image: redis:8-alpine
+    container_name: herdlink-redis
+    restart: unless-stopped
+    networks: [herdlink]
+    ports:
+      - "6379:6379"
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  # ─── MESSAGING ──────────────────────────────────────────────────────────────
+
+  # Kafka in KRaft mode (no Zookeeper). Single broker, single controller — fine
+  # for local dev. The two listeners exist for a reason: services running
+  # *inside* the docker network connect to kafka:29092, while tools running
+  # *on the host* (Kafka UI, your laptop's CLI) connect to localhost:9092.
+  kafka:
+    image: confluentinc/cp-kafka:8.2.0
+    container_name: herdlink-kafka
+    restart: unless-stopped
+    networks: [herdlink]
+    ports:
+      - "9092:9092"
+      - "9101:9101"   # JMX (optional, useful for debugging)
+    environment:
+      # KRaft (no Zookeeper) topology
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: 'broker,controller'
+      KAFKA_CONTROLLER_QUORUM_VOTERS: '1@kafka:29093'
+      KAFKA_CONTROLLER_LISTENER_NAMES: 'CONTROLLER'
+      CLUSTER_ID: 'MkU3OEVBNTcwNTJENDM2Qk'
+
+      # Listeners
+      KAFKA_LISTENERS: 'PLAINTEXT://kafka:29092,CONTROLLER://kafka:29093,PLAINTEXT_HOST://0.0.0.0:9092'
+      KAFKA_ADVERTISED_LISTENERS: 'PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092'
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: 'CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT'
+      KAFKA_INTER_BROKER_LISTENER_NAME: 'PLAINTEXT'
+
+      # Single-broker dev settings — DO NOT use these in production
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: 'true'
+
+      # JMX
+      KAFKA_JMX_PORT: 9101
+      KAFKA_JMX_HOSTNAME: localhost
+    volumes:
+      - kafka-data:/var/lib/kafka/data
+    healthcheck:
+      test: ["CMD-SHELL", "kafka-broker-api-versions --bootstrap-server localhost:9092 >/dev/null 2>&1"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 30s
+
+  schema-registry:
+    image: confluentinc/cp-schema-registry:8.2.0
+    container_name: herdlink-schema-registry
+    restart: unless-stopped
+    networks: [herdlink]
+    ports:
+      - "8081:8081"
+    environment:
+      SCHEMA_REGISTRY_HOST_NAME: schema-registry
+      SCHEMA_REGISTRY_LISTENERS: 'http://0.0.0.0:8081'
+      SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: 'PLAINTEXT://kafka:29092'
+    depends_on:
+      kafka:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8081/subjects >/dev/null"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  mosquitto:
+    image: eclipse-mosquitto:2.1-alpine
+    container_name: herdlink-mosquitto
+    restart: unless-stopped
+    networks: [herdlink]
+    ports:
+      - "1883:1883"   # MQTT
+      - "9001:9001"   # MQTT over websockets (optional, useful for debugging)
+    volumes:
+      - ./infra/mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+      - mosquitto-data:/mosquitto/data
+      - mosquitto-log:/mosquitto/log
+    healthcheck:
+      test: ["CMD", "mosquitto_sub", "-h", "localhost", "-t", "$$SYS/#", "-C", "1", "-W", "3"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+
+  # ─── OBSERVABILITY ──────────────────────────────────────────────────────────
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: herdlink-prometheus
+    restart: unless-stopped
+    networks: [herdlink]
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./infra/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--web.enable-lifecycle'
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: herdlink-grafana
+    restart: unless-stopped
+    networks: [herdlink]
+    ports:
+      - "3001:3000"   # 3001 on host, 3000 inside container
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_USERS_ALLOW_SIGN_UP: 'false'
+      GF_AUTH_ANONYMOUS_ENABLED: 'true'
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./infra/grafana/provisioning:/etc/grafana/provisioning:ro
+    depends_on:
+      - prometheus
+
+  jaeger:
+    image: jaegertracing/jaeger:2.17.0
+    container_name: herdlink-jaeger
+    restart: unless-stopped
+    networks: [herdlink]
+    ports:
+      - "16686:16686"   # Jaeger UI
+      - "4317:4317"     # OTLP gRPC receiver
+      - "4318:4318"     # OTLP HTTP receiver
+    volumes:
+      - ./infra/jaeger/config.yaml:/etc/jaeger/config.yaml:ro
+      - jaeger-data:/data
+    command: ["--config", "/etc/jaeger/config.yaml"]
+
+  # ─── DEVELOPER UIs ──────────────────────────────────────────────────────────
+  # Optional but high-value during development. Comment any out if you want a
+  # leaner stack.
+
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: herdlink-kafka-ui
+    restart: unless-stopped
+    networks: [herdlink]
+    ports:
+      - "8080:8080"
+    environment:
+      KAFKA_CLUSTERS_0_NAME: herdlink
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: 'kafka:29092'
+      KAFKA_CLUSTERS_0_SCHEMAREGISTRY: 'http://schema-registry:8081'
+      DYNAMIC_CONFIG_ENABLED: 'true'
+    depends_on:
+      kafka:
+        condition: service_healthy
+
+
+ 

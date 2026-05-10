@@ -1,0 +1,104 @@
+---
+description: Reliability, scalability, observability, and performance targets for HerdLink production-grade behaviour
+globs: services/**/*.ts,docker-compose*.yml,.k6/**/*.js,observability/**/*
+alwaysApply: false
+---
+
+# Reliability & Scalability
+
+## Performance targets (measured, not asserted)
+- End-to-end alert latency: **P95 < 2s, P99 < 5s** under 1,000 simulated devices.
+- Telemetry throughput: **3M events/day per simulated farm** sustained without consumer lag growth.
+- Consumer lag: < 1000 messages steady state, < 10000 under burst.
+- Dashboard query (GraphQL composite): P95 < 500ms.
+- These are **assertions** in the k6 load test, not aspirations.
+
+## Observability (mandatory, not a phase)
+Every service ships with three pillars wired before any business code:
+
+### Logs (Pino)
+- Structured JSON. Never `console.log`.
+- Required fields: `timestamp`, `level`, `service`, `correlationId`, `traceId`, `spanId`, `msg`.
+- Levels: `info` for state changes, `warn` for recoverable, `error` for alertable, `fatal` for process-killing.
+- No PII or secrets in logs. Redact via Pino redaction config.
+
+### Metrics (Prometheus)
+RED metrics on every service:
+- **Rate**: requests/messages per second.
+- **Errors**: error count by type.
+- **Duration**: latency histograms (P50/P95/P99 from Prometheus, not pre-computed).
+
+Plus per-domain:
+- Kafka consumer lag per topic+partition.
+- Redis hit/miss ratio for idempotency cache.
+- DB connection pool utilisation.
+- WebSocket connected clients.
+- Outbox pending count (alerting-service).
+
+### Traces (OpenTelemetry → Jaeger)
+- Every entry point starts a span. Every cross-service call propagates context.
+- Spans named for the operation: `kafka.consume telemetry.raw`, `db.insert telemetry`, `redis.geo`.
+- Business attributes on spans: `device.id`, `fence.id`, `alert.severity`. Not free-form noise.
+
+## SLO definitions (per service)
+Every service declares in its README:
+- **SLI**: what's measured (e.g., "successful telemetry writes").
+- **SLO**: target (e.g., "99.9% of telemetry writes succeed within 100ms").
+- **Error budget**: derived from SLO.
+- **Alert thresholds**: when to page (multi-window burn rate, not raw thresholds).
+
+## Backpressure (system-wide)
+- MQTT bridge: bounded buffer; on full, NACK the broker which then buffers on the device.
+- Kafka producers: respect broker backpressure; don't unbound queue messages in memory.
+- Kafka consumers: bounded concurrency, manual offsets — slowing down is the correct response, not crashing.
+- HTTP / GraphQL: rate limits + request queues bounded.
+- WebSocket: per-client send buffers bounded; slow clients get disconnected, not buffered indefinitely.
+
+## Graceful degradation
+Every service documents its failure mode. Tested in week 3.
+- Mongo down → alerting-service queues to outbox, retries when recovered. Telemetry path unaffected.
+- Redis down → idempotency check fails open with logged warning + metric (degraded mode). GEO queries fail; geofence-engine pauses processing rather than producing wrong alerts.
+- Kafka down → mqtt-bridge buffers locally up to a bound, then sheds load. Devices retain their own buffer.
+- dashboard-api down → ingestion + alerting unaffected. Dashboard offline, that's all.
+
+## Circuit breakers
+- On synchronous external calls (rare in HerdLink, but device-service ↔ Mongo, geofence-engine ↔ Redis on cold path).
+- `opossum` (or equivalent): half-open after 30s, threshold 50% error rate over 10 calls, timeout 2s.
+- Open circuit logged at warn, metric incremented, fallback path documented.
+
+## Health and readiness
+- `/health` (liveness): can the process respond? Cheap check. If this fails, restart.
+- `/ready` (readiness): are dependencies healthy? Kafka connected, DB reachable, caches warm. If this fails, drain traffic.
+- Readiness flips to false on `SIGTERM` so load balancers drain before shutdown completes.
+
+## Capacity planning
+- Each service has a documented capacity model: throughput per CPU core, memory per concurrent connection, disk per day of telemetry.
+- Headroom: target 60% utilisation at peak. Anything higher is on borrowed time.
+- Vertical scaling first for stateful (TimescaleDB, Mongo), horizontal for stateless (NestJS services).
+
+## Load testing (k6)
+- 1,000 devices, 10 minutes minimum, ramp + steady + ramp-down.
+- Asserts: P99 alert latency < 5s, error rate < 0.1%, no consumer lag growth.
+- Output committed to `LOAD_TEST_RESULTS.md` after every meaningful change.
+- Reproducible: `make loadtest` runs the whole thing.
+
+## Resource limits (Docker Compose)
+- Every container has CPU + memory limits set. Unbounded containers mask leaks.
+- Postgres: `shared_buffers`, `work_mem`, `effective_cache_size` tuned for the allocated memory.
+- Mongo: WiredTiger cache size set explicitly.
+- Kafka: heap size set, off-heap (page cache) reasoned about.
+
+## Failure injection (week 3+)
+- Kill containers during load tests. System recovers without manual intervention or data loss.
+- Network partitions simulated with `tc` / Docker network rules.
+- Document recovery time in load test results.
+
+## Anti-patterns to refuse
+- "Add observability later" — it's pre-requisite, not optional.
+- Latency assertions without measurement.
+- Unbounded queues / buffers / promise sets.
+- Single points of failure unless documented and accepted.
+- Synchronous chains that span more than 2 services on the write path.
+- Caching as the answer to a slow query — fix the query first.
+- Optimisation before profiling.
+- Premature horizontal scaling on stateful components.

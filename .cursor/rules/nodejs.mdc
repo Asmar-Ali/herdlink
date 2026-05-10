@@ -1,0 +1,53 @@
+---
+description: Node.js runtime conventions, async patterns, and performance idioms for HerdLink services
+globs: services/**/*.ts,packages/**/*.ts,apps/**/*.ts
+alwaysApply: false
+---
+
+# Node.js Conventions
+
+## Runtime
+- Node 20 LTS minimum. Use native `fetch`, `AbortController`, `structuredClone`.
+- ESM modules. No CommonJS in new code.
+- TypeScript strict mode (`strict: true`, `noUncheckedIndexedAccess: true`, `exactOptionalPropertyTypes: true`).
+
+## Async and concurrency
+- Async/await everywhere. No `.then()` chains, no callback APIs (wrap with `util.promisify` if forced).
+- Never block the event loop. Heavy CPU work (geofence math, polygon ops) goes in worker threads or is offloaded.
+- Use `Promise.all` for independent parallel work, `Promise.allSettled` when partial failure is acceptable.
+- Bound concurrency explicitly: `p-limit`, `p-queue`, or NestJS `BullMQ` for jobs. Never spawn unbounded promises.
+- Always pass `AbortSignal` for cancellable operations (HTTP, DB queries with timeouts).
+
+## Error handling
+- Throw typed errors that extend a base `AppError` with `code`, `statusCode`, `cause`. Never throw strings.
+- Use `cause` chains (`new Error('msg', { cause: err })`) so stack traces survive async boundaries.
+- Top-level `process.on('unhandledRejection')` and `'uncaughtException')` log and exit. Don't swallow.
+- `try/catch` around every `await` that crosses a service boundary. Internal logic relies on a global error filter.
+
+## Performance
+- Reuse connection pools (Postgres, Mongo, Redis, Kafka clients are singletons per process).
+- Avoid `JSON.parse`/`stringify` in hot paths on large payloads — use streaming or Avro decode directly.
+- Buffer-friendly APIs for MQTT and Kafka payloads. Don't `.toString()` until necessary.
+- Profile before optimising. `node --inspect` + Chrome DevTools, or `clinic.js` for flame graphs.
+
+## Module structure
+- One responsibility per file. Files over 300 lines are a smell.
+- Index barrel files only at package boundaries, never inside a service.
+- Co-locate tests with source: `foo.ts` + `foo.spec.ts`.
+
+## Logging
+- `pino` only. JSON output. Never `console.log` in committed code.
+- Every log line carries `correlationId`, `service`, `traceId` (from OpenTelemetry context).
+- Levels: `trace` (dev only), `debug`, `info` (state changes), `warn` (recoverable), `error` (alertable), `fatal` (process exit).
+
+## Graceful shutdown
+- Handle `SIGTERM`: stop accepting new work, drain in-flight (Kafka commit, HTTP close), flush logs, exit 0.
+- 30s shutdown grace period. Kafka consumers commit offsets before exit.
+- Health endpoint flips to unhealthy on shutdown signal so load balancers drain.
+
+## Anti-patterns to refuse
+- `any` types — use `unknown` and narrow.
+- Shared mutable module-level state.
+- Synchronous file I/O (`readFileSync`) outside startup.
+- `process.env` reads scattered through code — config goes through a typed config module.
+- Floating promises (no `await`, no `.catch`). ESLint `no-floating-promises` enforced.

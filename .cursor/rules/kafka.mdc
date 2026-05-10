@@ -1,0 +1,132 @@
+---
+description: Kafka producer/consumer patterns, partitioning, schemas, and reliability for HerdLink event backbone
+globs: services/**/*kafka*.ts,services/**/*producer*.ts,services/**/*consumer*.ts,services/**/kafka/**/*.ts,services/**/messaging/**/*.ts,packages/schemas/**/*
+alwaysApply: false
+---
+
+# Kafka Conventions
+
+## Client
+- `kafkajs` for Node services. One singleton client per process, exposed via NestJS module.
+- Schema Registry: `@kafkajs/confluent-schema-registry` for Avro encode/decode.
+- KRaft mode (no Zookeeper) — already decided.
+
+## Topics (HerdLink-specific)
+| Topic | Purpose | Partitions | Retention |
+|---|---|---|---|
+| `telemetry.raw` | Normalised collar telemetry from mqtt-bridge | 12 | 7 days |
+| `alerts.breaches` | Geofence breach events | 6 | 30 days |
+| `<topic>.dlq` | Dead-letter for each above | 3 | 14 days |
+
+- Topic names: `<domain>.<event>`. Past tense for events (`alerts.breached`), present for commands (`device.update`).
+- Partitions sized for parallelism, not future-proofing — easier to add than remove.
+
+## Partitioning
+- `telemetry.raw`: partition key = `device_id`. Same device → same partition → ordered processing.
+- `alerts.breaches`: partition key = `device_id`. Co-located with telemetry for tracing.
+- Never use a key that creates hot partitions (e.g., a single farm ID with 90% of traffic).
+- Document partitioning choice in an ADR — this is interview-question territory.
+
+## Producer config
+- `acks: 'all'` (or `-1`). Wait for all in-sync replicas.
+- `idempotent: true`. Prevents duplicates on producer retry.
+- `maxInFlightRequests: 5` (with idempotence; do not exceed 5).
+- `compression: CompressionTypes.Snappy` for telemetry. Saves 3-5x bandwidth.
+- Batching: rely on kafkajs defaults; tune `lingerMs` only with measured evidence.
+- Producer is a long-lived singleton. Connect on module init, disconnect on shutdown.
+
+## Producer code shape
+```ts
+await producer.send({
+  topic: 'telemetry.raw',
+  messages: [{
+    key: deviceId,
+    value: avroEncoded,
+    headers: {
+      'traceparent': currentSpan.spanContext(),
+      'correlationId': correlationId,
+      'schema-version': '1',
+    },
+    timestamp: String(Date.now()),
+  }],
+});
+```
+
+## Consumer config
+- `groupId`: `<service-name>` (one group per service, regardless of replica count).
+- `sessionTimeout: 30000`, `heartbeatInterval: 3000`.
+- `maxBytesPerPartition`: tune to avoid OOM on large messages.
+- **Manual offset commits** (`autoCommit: false`). Commit after successful processing + idempotency record.
+- Bounded concurrency per partition. `partitionsConsumedConcurrently` matches CPU count.
+- `readUncommitted: false` if using transactional producers upstream.
+
+## Consumer code shape (idempotent, instrumented)
+```ts
+await consumer.run({
+  autoCommit: false,
+  eachBatchAutoResolve: false,
+  eachBatch: async ({ batch, resolveOffset, heartbeat, commitOffsetsIfNecessary }) => {
+    for (const message of batch.messages) {
+      const correlationId = message.headers?.correlationId?.toString();
+      const span = tracer.startSpan(`kafka.consume ${batch.topic}`, { parent: extractContext(message.headers) });
+      try {
+        const idemKey = `idem:${batch.topic}:${message.key}:${message.offset}`;
+        if (await redis.set(idemKey, '1', 'NX', 'EX', 86400) !== 'OK') {
+          resolveOffset(message.offset);
+          continue; // duplicate, already processed
+        }
+        await handleMessage(message, { correlationId });
+        resolveOffset(message.offset);
+        await heartbeat();
+      } catch (err) {
+        span.recordException(err);
+        await sendToDlq(message, err);
+        resolveOffset(message.offset); // ack to skip — DLQ has it
+      } finally {
+        span.end();
+      }
+    }
+    await commitOffsetsIfNecessary();
+  },
+});
+```
+
+## Schemas (Avro)
+- Every topic has a registered schema. No raw JSON on Kafka.
+- Backward compatibility on producer evolution: new fields have defaults, no required field removal.
+- Schemas in `packages/schemas/` shared across services. Generated TypeScript types in `packages/schemas/types/`.
+- Schema version in message headers for explicit handling.
+
+## Backpressure
+- `partitionsConsumedConcurrently` bounds concurrency.
+- Internal worker queue (`p-queue`) bounds in-flight processing per partition.
+- If the consumer can't keep up, lag grows visibly in metrics — alert before it becomes a problem.
+- Never spawn unbounded promises inside a consumer.
+
+## Retries
+- Transient errors: retry with exponential backoff inside the handler (max 3 attempts, total time bounded).
+- Persistent errors: send to DLQ immediately. Do not retry forever.
+- Poison messages identified by repeated DLQ entries with the same offset → manual intervention.
+
+## DLQ pattern
+- DLQ topic: `<original>.dlq`.
+- DLQ message includes:
+  - Original payload (Avro-encoded as-is).
+  - `original-topic`, `original-partition`, `original-offset` headers.
+  - `error-class`, `error-message`, `error-stack` headers.
+  - `retry-count`, `failed-at` headers.
+- Replay tooling: a CLI that reads DLQ → re-publishes to original topic after manual fix.
+
+## Observability
+- Metrics: consumer lag (per topic + partition), processing latency, error rate, DLQ rate.
+- Trace every consume + produce as spans, linked via `traceparent` header propagation.
+- Log every DLQ send at `error` with full context.
+
+## Anti-patterns to refuse
+- Auto-commit (`autoCommit: true`) on any consumer that has side effects.
+- Processing messages without idempotency.
+- Synchronous DB writes inside a tight consumer loop without batching where it matters.
+- Catching errors silently — DLQ or rethrow, never swallow.
+- Adding partitions without considering existing key distribution (rebalances ordering).
+- One topic for many event types. One topic = one event schema family.
+- Long-running handlers without heartbeats (consumer kicked from group).

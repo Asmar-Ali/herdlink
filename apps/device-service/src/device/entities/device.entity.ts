@@ -1,5 +1,3 @@
-// apps/device-service/src/devices/entities/device.entity.ts
-
 import {
   Entity,
   PrimaryGeneratedColumn,

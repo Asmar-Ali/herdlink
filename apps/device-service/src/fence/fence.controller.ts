@@ -5,8 +5,7 @@ import {
   Body,
   Patch,
   Param,
-  Delete,
-  Version
+  Delete
 } from '@nestjs/common';
 import { FenceService } from './fence.service';
 import { CreateFenceDto } from './dto/create-fence.dto';

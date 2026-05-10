@@ -1,5 +1,3 @@
-// apps/device-service/src/geofences/schemas/geofence.schema.ts
-
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document } from 'mongoose';
 

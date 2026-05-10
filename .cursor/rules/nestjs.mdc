@@ -1,0 +1,70 @@
+---
+description: NestJS architecture, DI, module structure, and testing conventions for HerdLink services
+globs: services/**/*.module.ts,services/**/*.controller.ts,services/**/*.service.ts,services/**/*.resolver.ts,services/**/*.gateway.ts,services/**/*.consumer.ts
+alwaysApply: false
+---
+
+# NestJS Conventions
+
+## Module structure
+- One feature = one module. Modules export only what other modules need.
+- `AppModule` is composition, not logic. No providers declared directly there.
+- Configuration via `@nestjs/config` with a typed schema (Joi or Zod). Never read `process.env` outside config.
+- `ConfigModule.forRoot({ isGlobal: true, validate })` once at the root.
+
+## Dependency injection
+- Constructor injection only. No property injection, no `Inject()` strings unless unavoidable.
+- Use injection tokens (`const KAFKA_CLIENT = Symbol('KAFKA_CLIENT')`) for non-class providers.
+- Custom providers (`useFactory`, `useClass`, `useValue`) live in the module that owns them.
+- Singleton scope by default. `Scope.REQUEST` only when truly per-request state is needed (it disables caching and hurts perf).
+
+## Service responsibilities (per HerdLink architecture)
+- Controllers/Gateways/Resolvers are thin — parse, delegate, format. No business logic.
+- Services hold logic. Pure functions where possible; side effects (DB, Kafka, Redis) at the edges.
+- Repositories isolate persistence. Services depend on repository interfaces, not concrete clients.
+- Kafka consumers are providers implementing `OnModuleInit` (subscribe) and `OnModuleDestroy` (commit + disconnect).
+
+## Lifecycle hooks
+- `OnModuleInit`: open connections, subscribe to topics, warm caches.
+- `OnApplicationBootstrap`: cross-module readiness (e.g., geofence-engine loads fences from device-service).
+- `OnModuleDestroy` / `OnApplicationShutdown`: drain consumers, commit offsets, close pools. Implement `enableShutdownHooks()` in `main.ts`.
+
+## Validation
+- `class-validator` + `class-transformer` on all DTOs.
+- Global `ValidationPipe` with `whitelist: true, forbidNonWhitelisted: true, transform: true`.
+- Validation errors return typed `BadRequestException` with field-level detail.
+
+## Error handling
+- Global exception filter that maps domain errors → HTTP/GraphQL/Kafka responses.
+- Never leak stack traces to clients. Log full context server-side with correlation ID.
+- Domain errors live in `src/errors/` and extend a base `DomainError`.
+
+## Interceptors and pipes
+- Logging interceptor: wraps every request with correlation ID, latency, status.
+- Tracing interceptor: starts/ends OpenTelemetry spans with route + method as span name.
+- Metrics interceptor: increments RED counters per route.
+- Don't put business logic in interceptors.
+
+## Testing
+- `@nestjs/testing` `Test.createTestingModule` for unit tests.
+- Override providers with mocks at the module level, not via Jest module mocking.
+- Integration tests bootstrap the real module against Testcontainers (Kafka/Redis/Postgres/Mongo) — no mocks.
+- E2E tests use `supertest` against a live `INestApplication`.
+
+## GraphQL (dashboard-api)
+- Code-first with `@nestjs/graphql` and `@apollo/server`. Schema generated from decorators.
+- Resolvers stay thin — delegate to services.
+- DataLoader for N+1 prevention on every nested field that hits a datasource.
+- Federation not needed; this is a BFF.
+
+## WebSockets (realtime-gateway)
+- `@WebSocketGateway` with `socket.io` adapter.
+- Authenticated connections only — verify JWT in `handleConnection`, disconnect on failure.
+- Per-client room subscriptions (e.g., `farm:${farmId}`) so fan-out is scoped.
+
+## Anti-patterns to refuse
+- Logic in controllers.
+- Direct `new Service()` instantiation — use DI.
+- `forwardRef` to break circular deps — restructure modules instead.
+- `any` in DTOs.
+- Global modules for anything that isn't truly cross-cutting (config, logger, tracing).

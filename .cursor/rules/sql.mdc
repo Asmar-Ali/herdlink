@@ -1,0 +1,84 @@
+---
+description: PostgreSQL and TimescaleDB query patterns, transactions, and performance for HerdLink telemetry
+globs: services/**/*repository*.ts,services/**/*.sql,services/**/migrations/**/*.ts,services/**/migrations/**/*.sql,services/ingestion-service/**/*.ts,services/device-service/**/*.ts
+alwaysApply: false
+---
+
+# SQL & TimescaleDB Conventions
+
+## Client and migrations
+- `pg` driver via a NestJS module wrapping a single pool per service.
+- Migrations: `node-pg-migrate` or Knex. Versioned, forward-only, reviewed in PR.
+- One migration file per change. Never edit a committed migration — write a new one.
+- Migrations run on deploy via a separate one-shot job, not on app boot.
+
+## Connection pooling
+- Pool size = `(2 * cpu_count) + effective_disk_count`, tuned per service.
+- Statement timeout: 5s for OLTP queries, 30s for analytics (separate pool if needed).
+- `idle_in_transaction_session_timeout`: 10s. Catches forgotten transactions.
+- Health check uses a cheap `SELECT 1`, not a real query.
+
+## Schema design (telemetry)
+- TimescaleDB hypertable on `telemetry`:
+  ```sql
+  CREATE TABLE telemetry (
+    device_id   UUID NOT NULL,
+    ts          TIMESTAMPTZ NOT NULL,
+    lat         DOUBLE PRECISION NOT NULL,
+    lng         DOUBLE PRECISION NOT NULL,
+    battery     SMALLINT,
+    raw         JSONB,
+    PRIMARY KEY (device_id, ts)
+  );
+  SELECT create_hypertable('telemetry', 'ts', chunk_time_interval => INTERVAL '1 day');
+  ```
+- Composite primary key `(device_id, ts)` for upsert idempotency and locality.
+- Index on `(device_id, ts DESC)` for "last N readings" queries.
+- Compression policy: compress chunks older than 7 days (`ALTER TABLE ... SET (timescaledb.compress, ...)`).
+- Retention policy: drop chunks older than 90 days unless overridden.
+
+## Schema design (devices)
+- Vanilla Postgres tables. Foreign keys for referential integrity.
+- UUIDs (v7 if available, v4 fallback) for primary keys. Never auto-increment for distributed-friendly IDs.
+- `created_at` and `updated_at` on every table, default `NOW()`, updated via trigger.
+- Soft delete only when audit requires it; otherwise hard delete with audit log.
+
+## Query patterns
+- Parameterised queries always. No string interpolation. ORM or query builder mandatory.
+- Avoid `SELECT *`. Name columns explicitly so schema evolution is safe.
+- For TimescaleDB time-range queries, always include the time column in WHERE — chunk pruning depends on it.
+- Use `time_bucket()` for aggregations: `SELECT time_bucket('1 minute', ts), avg(battery) FROM telemetry WHERE ...`.
+- Continuous aggregates for dashboard rollups (1-min, 5-min, 1-hour buckets).
+
+## Transactions
+- One transaction per logical operation. No transactions spanning HTTP requests.
+- `READ COMMITTED` default. `REPEATABLE READ` only when correctness demands it (rare).
+- Outbox writes use the same transaction as the domain write — non-negotiable.
+- No long-running transactions. If it takes >1s, redesign.
+
+## Performance
+- `EXPLAIN (ANALYZE, BUFFERS)` every query in development before it ships.
+- Index for the queries actually run, not speculatively. Monitor `pg_stat_user_indexes` for unused indexes.
+- Prepared statements via the driver — `pg` handles this automatically with named queries.
+- Bulk inserts: `INSERT ... VALUES (...), (...), ...` or `COPY` for large batches. Never row-by-row in a loop.
+- `ON CONFLICT DO NOTHING` for idempotent ingestion: `INSERT INTO telemetry (...) VALUES (...) ON CONFLICT (device_id, ts) DO NOTHING`.
+
+## TimescaleDB specifics
+- Hypertable inserts auto-route to the right chunk; nothing special required in app code.
+- Don't update old chunks if compression is enabled — decompression cost is real.
+- Continuous aggregates refresh on a schedule (`add_continuous_aggregate_policy`); dashboards read from these, not raw.
+- Check `timescaledb_information.chunks` for chunk health in ops dashboards.
+
+## Repository pattern
+- One repository class per aggregate (Device, Fence, Telemetry).
+- Methods return domain objects, never raw rows.
+- No business logic — only data access.
+- Repository interface in `domain/`, implementation in `infrastructure/`.
+
+## Anti-patterns to refuse
+- ORMs that obscure SQL for hot paths (TypeORM is acceptable for CRUD; use raw SQL for telemetry queries).
+- N+1 queries — eager load or batch.
+- Cross-service joins. Each service owns its data.
+- Foreign keys across service boundaries.
+- Triggers for business logic (use them only for `updated_at` and audit).
+- Long-running migrations on hot tables without `CONCURRENTLY` indexes.

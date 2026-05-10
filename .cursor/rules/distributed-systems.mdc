@@ -1,0 +1,86 @@
+---
+description: Distributed systems patterns — idempotency, sagas, outbox, tracing, consistency for HerdLink
+globs: services/**/*consumer*.ts,services/**/*producer*.ts,services/**/*outbox*.ts,services/**/*saga*.ts,services/**/*alerting*.ts,services/**/*ingestion*.ts
+alwaysApply: false
+---
+
+# Distributed Systems Patterns
+
+## Core assumptions
+- Networks fail. Messages duplicate. Order is not guaranteed across partitions.
+- Every cross-service interaction is at-least-once. Idempotency makes it effectively-once.
+- Clocks drift. Use monotonic clocks for durations, wall clock only for timestamps.
+- Services fail independently. One service down must not cascade.
+
+## Idempotency (mandatory for all consumers)
+- Every Kafka consumer has an idempotency key:
+  - Telemetry: `${deviceId}:${timestamp}` (no duplicate writes for the same reading).
+  - Alerts: `${deviceId}:${fenceId}:${windowBucket}` (dedupe within window).
+  - Generic events: message ID from headers.
+- Key stored in Redis with 24h TTL. `SET key 1 NX EX 86400` — if `NX` fails, message already processed, skip.
+- Idempotency check happens **before** any side effect, inside the consumer's processing function.
+
+## Outbox pattern (alerting-service)
+- Atomic Mongo write + Redis publish is impossible without a coordinator.
+- Same transaction: write alert document AND insert outbox record.
+- Separate worker drains the outbox: read pending → publish to Redis → mark sent.
+- Outbox worker is itself idempotent (publishes are dedupable downstream).
+- Failed publishes stay in outbox; retried with exponential backoff.
+
+## Distributed transactions (sagas)
+- No 2PC. Ever. If you need it, the boundaries are wrong.
+- Choreography preferred for HerdLink (events drive next steps). Orchestration only when ordering is critical and observability via a state machine is worth the central coordinator.
+- Every step has a compensating action documented in code and ADR.
+- Saga state persisted (Mongo for HerdLink) so a crashed saga resumes.
+
+## Retries and backoff
+- Exponential backoff with full jitter: `delay = random(0, min(cap, base * 2^attempt))`.
+- Bounded retries (typically 5). Beyond cap → DLQ.
+- Retries only on transient errors (network, 5xx, timeout). Never retry on 4xx, validation, idempotency violations.
+- Circuit breakers on synchronous downstream calls — `opossum` or equivalent. Open state fails fast, half-open probes recovery.
+
+## Dead-letter queues
+- Every Kafka topic has a `<topic>.dlq` counterpart.
+- DLQ message retains: original payload, error chain, retry count, original headers, timestamp.
+- DLQ is monitored — non-zero size triggers an alert.
+- Replay tooling exists (a CLI script that re-publishes from DLQ to original topic after fix).
+
+## Distributed tracing
+- W3C Trace Context (`traceparent`, `tracestate`) propagated through:
+  - HTTP: standard headers, auto-injected by OpenTelemetry HTTP instrumentation.
+  - Kafka: message headers `traceparent` / `tracestate`. Inject in producer, extract in consumer.
+  - MQTT: encoded in payload metadata (MQTT 3.1 has no header support); MQTT 5 user properties otherwise.
+  - WebSocket: included in initial handshake and per-message envelope.
+- Every span carries `correlationId` as an attribute alongside trace ID.
+- Span names use the operation, not the URL: `kafka.consume telemetry.raw`, not `process_message`.
+
+## Correlation IDs
+- Generated at the edge (mqtt-bridge for telemetry, dashboard-api for user requests).
+- Propagated through every hop. Every log line includes it.
+- Format: ULID (sortable, debuggable).
+
+## Consistency model (per data class)
+- Telemetry (TimescaleDB): eventually consistent, append-only, last-write-wins on (device_id, ts).
+- Alerts (Mongo): strongly consistent within a single alert document; eventual across the system.
+- Live positions (Redis): last-write-wins, TTL-bounded staleness (~30s).
+- Fences (Mongo): strongly consistent on writes; cached in geofence-engine memory with change-stream invalidation.
+
+## Service degradation
+- Each service documents its failure mode in a header comment:
+  - What happens if it crashes?
+  - What happens if its dependencies fail?
+  - What downstream is affected?
+- Tested in week 3: kill dashboard-api → ingestion + alerting continue.
+
+## CAP and the choices made
+- Telemetry path chooses AP: ingestion accepts writes even if downstream is slow.
+- Alerting path chooses CP for the alert state itself (Mongo strong consistency on the document).
+- Document these in ADRs with the trade-off named, not "best practice".
+
+## Anti-patterns to refuse
+- Synchronous chains of 3+ services on the write path.
+- Distributed locks for business logic (use idempotency + version vectors).
+- "We'll add observability later".
+- Retries without idempotency.
+- Catch-and-swallow that hides distributed errors.
+- Long-lived transactions that span service calls.

@@ -1,10 +1,8 @@
 # ─────────────────────────────────────────────────────────────────────────────
 # HerdLink — local development infrastructure
 #
-# What's here: every stateful service the platform needs (databases, brokers,
-# observability). What's NOT here: the application services themselves —
-# device-service, mqtt-bridge, geofence-engine, etc. We'll add those as we
-# build them in subsequent weeks. This file is the stable foundation.
+# What's here: stateful infra (databases, brokers, observability) plus the
+# NestJS device-service for local API development.
 #
 # Quickstart:
 #   docker compose up                # start everything
@@ -27,6 +25,7 @@
 #   4317  Jaeger OTLP gRPC
 #   4318  Jaeger OTLP HTTP
 #   8080  Kafka UI
+#   3002  device-service (NestJS on host → 3000 in container)
 #   8082  mongo-express
 #   8083  pgAdmin
 # ─────────────────────────────────────────────────────────────────────────────
@@ -38,6 +37,7 @@ networks:
     driver: bridge
 
 volumes:
+  device-service-node-modules:
   timescale-data:
   mongo-data:
   redis-data:
@@ -59,7 +59,7 @@ services:
     restart: unless-stopped
     networks: [herdlink]
     ports:
-      - "5430:5430"
+      - "5430:5432"
     environment:
       POSTGRES_USER: herdlink
       POSTGRES_PASSWORD: herdlink_dev
@@ -246,6 +246,40 @@ services:
       - ./infra/jaeger/config.yaml:/tmp/jaeger-config.yaml:ro
       - jaeger-data:/data
     command: ["--config", "/tmp/jaeger-config.yaml"]
+
+  # ─── APPLICATION ────────────────────────────────────────────────────────────
+
+  device-service:
+    build:
+      context: ./apps/device-service
+      dockerfile: Dockerfile
+    image: herdlink-device:local
+    container_name: herdlink-device
+    restart: unless-stopped
+    networks: [herdlink]
+    ports:
+      # Host 3002 avoids clashing with a local Nest/other app on 3000
+      - "3002:3000"
+    working_dir: /app
+    command: ["npm", "run", "start:dev"]
+    volumes:
+      - ./apps/device-service:/app
+      - device-service-node-modules:/app/node_modules
+    environment:
+      PORT: "3000"
+      NODE_ENV: development
+      # Ready when you wire TypeORM / Mongoose (Docker DNS hostnames)
+      MONGODB_URI: mongodb://herdlink:herdlink_dev@mongodb:27017/herdlink?authSource=admin
+      POSTGRES_HOST: timescaledb
+      POSTGRES_PORT: "5432"
+      POSTGRES_USER: herdlink
+      POSTGRES_PASSWORD: herdlink_dev
+      POSTGRES_DB: herdlink
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      timescaledb:
+        condition: service_healthy
 
   # ─── DEVELOPER UIs ──────────────────────────────────────────────────────────
   # Optional but high-value during development. Comment any out if you want a

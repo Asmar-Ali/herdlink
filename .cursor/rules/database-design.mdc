@@ -1,0 +1,88 @@
+---
+description: Database design, polyglot persistence boundaries, and data modeling decisions for HerdLink
+globs: services/**/schema/**/*.ts,services/**/migrations/**/*.ts,services/**/migrations/**/*.sql,services/**/*entity*.ts,services/**/*model*.ts,services/**/*schema*.ts,services/**/*.prisma
+alwaysApply: false
+---
+
+# Database Design
+
+## Polyglot persistence (HerdLink-specific)
+Three datastores, each chosen for a workload it's genuinely good at. Don't mix.
+
+| Store | Workload | Rationale |
+|---|---|---|
+| TimescaleDB | Time-series telemetry, append-heavy, range queries | Hypertables, compression, time_bucket aggregations |
+| MongoDB | GeoJSON fences, alert documents (variable shape), device configs | Schema flexibility for variable payloads, native geospatial |
+| Redis | Live positions (GEO), idempotency keys, pub/sub | Sub-ms reads, TTLs, pub/sub primitives |
+
+- **Never** put telemetry in Mongo. Never put fences in Postgres (we lose GeoJSON ergonomics).
+- **Never** persist business state in Redis (it's a cache + ephemeral coordinator, not source of truth).
+
+## Service ownership
+- Each service owns its tables/collections. No service reads another service's database directly.
+- Cross-service data exchange happens via:
+  1. Async events (Kafka) — preferred.
+  2. Synchronous API calls (REST/GraphQL) — for queries where staleness is unacceptable.
+- No shared database. No views across services. No foreign keys across services.
+
+## Identifiers
+- UUIDs everywhere (v7 preferred for time-ordered, v4 fallback).
+- One canonical ID per entity. Never expose internal sequence IDs.
+- Composite keys only where natural (e.g., telemetry `(device_id, ts)`).
+
+## Modeling principles
+- Model the aggregate, not the table. Aggregate boundaries match transaction boundaries.
+- Denormalise for read paths when joins cost more than redundancy. Document the denormalisation in an ADR.
+- No nullable columns unless null has a defined business meaning. "Unknown" is a state, encode it.
+- Booleans become enums the moment a third state is plausible.
+
+## TimescaleDB modeling (telemetry)
+- One wide row per reading. JSONB `raw` field for sensor extensibility without schema churn.
+- Hot path columns (lat, lng, battery) lifted out of JSONB for indexable queries.
+- Hypertable chunked by `ts` (1-day intervals). Compression after 7 days. Retention at 90 days.
+- Continuous aggregates for dashboard rollups (1-min, 5-min, 1-hour) so dashboards never scan raw chunks.
+
+## Mongo modeling
+- One collection per aggregate root: `fences`, `alerts`, `device_configs`, `outbox`.
+- Embedded documents for tightly coupled child data (alert state history inside the alert doc).
+- References (by ID) for loosely coupled data (fence ID inside an alert).
+- Schema validation via `$jsonSchema` on every collection. Mongo without validation is JSON soup.
+- 2dsphere index on fence geometries: `db.fences.createIndex({ geometry: '2dsphere' })`.
+- TTL index on outbox records (e.g., 7-day retention for sent items).
+
+## Redis modeling
+- Key namespacing: `<domain>:<entity>:<id>`. Examples:
+  - `pos:device:<uuid>` — last position (GEO).
+  - `idem:alert:<deviceId>:<fenceId>` — idempotency key.
+  - `ch:alerts` — pub/sub channel.
+- Every key has a TTL unless it's a structural key (pub/sub channels). No unbounded growth.
+- GEO operations on a single key: `GEOADD positions <lng> <lat> <deviceId>`.
+
+## Schema evolution
+- Postgres: forward-only migrations. Additive changes (new column nullable, new table) deploy first; reads adapt; old paths removed in a follow-up.
+- Mongo: add fields freely; never remove fields without a migration. Validators updated alongside writers.
+- Avro for Kafka payloads: backward + forward compatible changes only (new fields with defaults, no required field removal).
+- Breaking changes get a new topic/collection/version, not an in-place rewrite.
+
+## Data lifecycle
+- Every entity has a documented retention policy:
+  - Telemetry: 90 days hot, archived after.
+  - Alerts: 1 year, then archived.
+  - Outbox: 7 days post-send.
+  - Idempotency keys: 24h.
+- Deletion is real unless audit requires soft delete. Soft delete = `deleted_at` column + filtered queries everywhere (don't forget any).
+
+## Indexes
+- Index for queries you actually run. Drop unused indexes (`pg_stat_user_indexes`, Mongo `$indexStats`).
+- Composite indexes ordered by selectivity, then sort columns.
+- Partial indexes for sparse predicates (e.g., `WHERE status = 'NEW'`).
+- Background index builds in production (`CREATE INDEX CONCURRENTLY`, Mongo `{ background: true }`).
+
+## Anti-patterns to refuse
+- Cross-service JOINs.
+- Foreign keys across service boundaries.
+- Storing the same entity authoritatively in two places.
+- Mongo as a relational store with `$lookup` everywhere.
+- Postgres as a document store with deeply nested JSONB on hot paths.
+- Redis as primary store for anything that can't be regenerated.
+- "We'll add the index later" on a query that runs on every request.

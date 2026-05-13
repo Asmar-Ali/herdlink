@@ -8,7 +8,22 @@ describe('FenceController', () => {
   let controller: FenceController;
   let service: jest.Mocked<FenceService>;
 
-  const baseCreateDto: CreateFenceDto = {};
+  const baseCreateDto: CreateFenceDto = {
+    name: 'Test Fence',
+    type: 'INCLUSION' as CreateFenceDto['type'],
+    geometry: {
+      type: 'Polygon',
+      coordinates: [
+        [
+          [0, 0],
+          [1, 0],
+          [1, 1],
+          [0, 1],
+          [0, 0],
+        ],
+      ],
+    },
+  };
 
   beforeAll(async () => {
     const module: TestingModule = await Test.createTestingModule({

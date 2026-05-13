@@ -6,23 +6,22 @@ import { CreateDeviceDto } from './dto/create-device.dto';
 import { UpdateDeviceDto } from './dto/update-device.dto';
 import { Device, DeviceStatus, DeviceType } from './entities/device.entity';
 
-const makeDevice = (overrides: Partial<Device> = {}): Device =>
-  ({
-    id: 'uuid-1',
-    serialNumber: 'SN-001',
-    name: 'Cow #1',
-    type: DeviceType.COLLAR_V1,
-    status: DeviceStatus.INACTIVE,
-    herdId: null,
-    lastLatitude: null,
-    lastLongitude: null,
-    lastSeenAt: null,
-    batteryLevel: null,
-    metadata: {},
-    createdAt: new Date('2024-01-01'),
-    updatedAt: new Date('2024-01-01'),
-    ...overrides,
-  }) as Device;
+const makeDevice = (overrides: Partial<Device> = {}): Device => ({
+  id: 'uuid-1',
+  serialNumber: 'SN-001',
+  name: 'Cow #1',
+  type: DeviceType.COLLAR_V1,
+  status: DeviceStatus.INACTIVE,
+  herdId: null,
+  lastLatitude: null,
+  lastLongitude: null,
+  lastSeenAt: null,
+  batteryLevel: null,
+  metadata: {},
+  createdAt: new Date('2024-01-01'),
+  updatedAt: new Date('2024-01-01'),
+  ...overrides,
+});
 
 describe('DeviceService', () => {
   let service: DeviceService;
@@ -81,7 +80,10 @@ describe('DeviceService', () => {
 
   describe('findAll', () => {
     it('returns all devices from repository', async () => {
-      const devices = [makeDevice({ id: 'uuid-1' }), makeDevice({ id: 'uuid-2' })];
+      const devices = [
+        makeDevice({ id: 'uuid-1' }),
+        makeDevice({ id: 'uuid-2' }),
+      ];
       repo.findAll.mockResolvedValue(devices);
 
       const result = await service.findAll();
@@ -138,7 +140,9 @@ describe('DeviceService', () => {
     it('propagates repository errors (e.g. UnprocessableEntityException)', async () => {
       repo.update.mockRejectedValue(new Error('unprocessable'));
 
-      await expect(service.update('uuid-1', {})).rejects.toThrow('unprocessable');
+      await expect(service.update('uuid-1', {})).rejects.toThrow(
+        'unprocessable',
+      );
     });
   });
 

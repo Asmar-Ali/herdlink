@@ -4,23 +4,22 @@ import { DeepPartial, DeleteResult, Repository } from 'typeorm';
 import { DeviceRepository } from './device.repository';
 import { Device, DeviceStatus, DeviceType } from './entities/device.entity';
 
-const makeDevice = (overrides: Partial<Device> = {}): Device =>
-  ({
-    id: 'uuid-1',
-    serialNumber: 'SN-001',
-    name: 'Cow #1',
-    type: DeviceType.COLLAR_V1,
-    status: DeviceStatus.INACTIVE,
-    herdId: null,
-    lastLatitude: null,
-    lastLongitude: null,
-    lastSeenAt: null,
-    batteryLevel: null,
-    metadata: {},
-    createdAt: new Date('2024-01-01'),
-    updatedAt: new Date('2024-01-01'),
-    ...overrides,
-  }) as Device;
+const makeDevice = (overrides: Partial<Device> = {}): Device => ({
+  id: 'uuid-1',
+  serialNumber: 'SN-001',
+  name: 'Cow #1',
+  type: DeviceType.COLLAR_V1,
+  status: DeviceStatus.INACTIVE,
+  herdId: null,
+  lastLatitude: null,
+  lastLongitude: null,
+  lastSeenAt: null,
+  batteryLevel: null,
+  metadata: {},
+  createdAt: new Date('2024-01-01'),
+  updatedAt: new Date('2024-01-01'),
+  ...overrides,
+});
 
 describe('DeviceRepository', () => {
   let deviceRepository: DeviceRepository;
@@ -64,7 +63,10 @@ describe('DeviceRepository', () => {
 
   describe('create', () => {
     it('builds a row with COLLAR_V1 / INACTIVE defaults and saves it', async () => {
-      const input: DeepPartial<Device> = { serialNumber: 'SN-001', name: 'Cow #1' };
+      const input: DeepPartial<Device> = {
+        serialNumber: 'SN-001',
+        name: 'Cow #1',
+      };
       const built = makeDevice();
       const saved = makeDevice({ id: 'uuid-1' });
 
@@ -93,7 +95,10 @@ describe('DeviceRepository', () => {
         type: DeviceType.COLLAR_V2,
         status: DeviceStatus.ACTIVE,
       };
-      const built = makeDevice({ type: DeviceType.COLLAR_V2, status: DeviceStatus.ACTIVE });
+      const built = makeDevice({
+        type: DeviceType.COLLAR_V2,
+        status: DeviceStatus.ACTIVE,
+      });
       repo.create.mockReturnValue(built);
       repo.save.mockResolvedValue(built);
 
@@ -123,7 +128,10 @@ describe('DeviceRepository', () => {
 
   describe('findAll', () => {
     it('returns all devices ordered by createdAt DESC', async () => {
-      const devices = [makeDevice({ id: 'uuid-2' }), makeDevice({ id: 'uuid-1' })];
+      const devices = [
+        makeDevice({ id: 'uuid-2' }),
+        makeDevice({ id: 'uuid-1' }),
+      ];
       repo.find.mockResolvedValue(devices);
 
       const result = await deviceRepository.findAll();
@@ -163,12 +171,18 @@ describe('DeviceRepository', () => {
       const patched = makeDevice({ name: 'Updated Name' });
 
       repo.findOne.mockResolvedValue(existing);
-      repo.merge.mockImplementation((entity, patch) => Object.assign(entity, patch));
+      repo.merge.mockImplementation((entity, patch) =>
+        Object.assign(entity, patch),
+      );
       repo.save.mockResolvedValue(patched);
 
-      const result = await deviceRepository.update('uuid-1', { name: 'Updated Name' });
+      const result = await deviceRepository.update('uuid-1', {
+        name: 'Updated Name',
+      });
 
-      expect(repo.merge).toHaveBeenCalledWith(existing, { name: 'Updated Name' });
+      expect(repo.merge).toHaveBeenCalledWith(existing, {
+        name: 'Updated Name',
+      });
       expect(repo.save).toHaveBeenCalledWith(existing);
       expect(result).toBe(patched);
     });
@@ -176,7 +190,9 @@ describe('DeviceRepository', () => {
     it('returns null without touching the db when device is not found', async () => {
       repo.findOne.mockResolvedValue(null);
 
-      const result = await deviceRepository.update('no-such-id', { name: 'Ghost' });
+      const result = await deviceRepository.update('no-such-id', {
+        name: 'Ghost',
+      });
 
       expect(repo.merge).not.toHaveBeenCalled();
       expect(repo.save).not.toHaveBeenCalled();
@@ -188,7 +204,7 @@ describe('DeviceRepository', () => {
 
   describe('remove', () => {
     it('returns true when a row was deleted', async () => {
-      repo.delete.mockResolvedValue({ affected: 1 } as DeleteResult);
+      repo.delete.mockResolvedValue({ affected: 1 });
 
       const result = await deviceRepository.remove('uuid-1');
 
@@ -197,7 +213,7 @@ describe('DeviceRepository', () => {
     });
 
     it('returns false when no row matched', async () => {
-      repo.delete.mockResolvedValue({ affected: 0 } as DeleteResult);
+      repo.delete.mockResolvedValue({ affected: 0 });
 
       const result = await deviceRepository.remove('no-such-id');
 
@@ -205,7 +221,7 @@ describe('DeviceRepository', () => {
     });
 
     it('returns false when affected is undefined', async () => {
-      repo.delete.mockResolvedValue({} as DeleteResult);
+      repo.delete.mockResolvedValue({});
 
       const result = await deviceRepository.remove('uuid-1');
 

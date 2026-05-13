@@ -7,6 +7,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { Request, Response } from 'express';
+import { RequestContext } from '../context/request-context.js';
 
 export interface ErrorResponse {
   statusCode: number;
@@ -14,6 +15,7 @@ export interface ErrorResponse {
   message: string | string[];
   path: string;
   timestamp: string;
+  correlationId?: string;
 }
 
 @Catch()
@@ -35,8 +37,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
 
     const message: string | string[] =
       rawResponse !== null
-        ? typeof rawResponse === 'object' &&
-          'message' in (rawResponse as object)
+        ? typeof rawResponse === 'object' && 'message' in rawResponse
           ? (rawResponse as { message: string | string[] }).message
           : (rawResponse as string)
         : 'Internal server error';
@@ -44,13 +45,16 @@ export class HttpExceptionFilter implements ExceptionFilter {
     const errorLabel =
       rawResponse !== null &&
       typeof rawResponse === 'object' &&
-      'error' in (rawResponse as object)
+      'error' in rawResponse
         ? (rawResponse as { error: string }).error
-        : HttpStatus[statusCode] ?? 'Error';
+        : (HttpStatus[statusCode] ?? 'Error');
 
-    if (statusCode >= HttpStatus.INTERNAL_SERVER_ERROR) {
+    const correlationId =
+      request.correlationId ?? RequestContext.correlationId();
+
+    if (statusCode >= 500) {
       this.logger.error(
-        `${request.method} ${request.url} → ${statusCode}`,
+        `${request.method} ${request.url} → ${statusCode} [${correlationId ?? 'no-cid'}]`,
         exception instanceof Error ? exception.stack : String(exception),
       );
     }
@@ -61,6 +65,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
       message,
       path: request.url,
       timestamp: new Date().toISOString(),
+      ...(correlationId ? { correlationId } : {}),
     };
 
     response.status(statusCode).json(body);

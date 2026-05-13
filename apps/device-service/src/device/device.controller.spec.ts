@@ -6,23 +6,22 @@ import { CreateDeviceDto } from './dto/create-device.dto';
 import { UpdateDeviceDto } from './dto/update-device.dto';
 import { Device, DeviceStatus, DeviceType } from './entities/device.entity';
 
-const makeDevice = (overrides: Partial<Device> = {}): Device =>
-  ({
-    id: 'uuid-1',
-    serialNumber: 'SN-001',
-    name: 'Cow #1',
-    type: DeviceType.COLLAR_V1,
-    status: DeviceStatus.INACTIVE,
-    herdId: null,
-    lastLatitude: null,
-    lastLongitude: null,
-    lastSeenAt: null,
-    batteryLevel: null,
-    metadata: {},
-    createdAt: new Date('2024-01-01'),
-    updatedAt: new Date('2024-01-01'),
-    ...overrides,
-  }) as Device;
+const makeDevice = (overrides: Partial<Device> = {}): Device => ({
+  id: 'uuid-1',
+  serialNumber: 'SN-001',
+  name: 'Cow #1',
+  type: DeviceType.COLLAR_V1,
+  status: DeviceStatus.INACTIVE,
+  herdId: null,
+  lastLatitude: null,
+  lastLongitude: null,
+  lastSeenAt: null,
+  batteryLevel: null,
+  metadata: {},
+  createdAt: new Date('2024-01-01'),
+  updatedAt: new Date('2024-01-01'),
+  ...overrides,
+});
 
 describe('DeviceController', () => {
   let controller: DeviceController;
@@ -82,7 +81,10 @@ describe('DeviceController', () => {
 
   describe('findAll', () => {
     it('returns all devices from service', async () => {
-      const devices = [makeDevice({ id: 'uuid-1' }), makeDevice({ id: 'uuid-2' })];
+      const devices = [
+        makeDevice({ id: 'uuid-1' }),
+        makeDevice({ id: 'uuid-2' }),
+      ];
       service.findAll.mockResolvedValue(devices);
 
       const result = await controller.findAll();
@@ -106,9 +108,13 @@ describe('DeviceController', () => {
     });
 
     it('propagates NotFoundException from service', async () => {
-      service.findOne.mockRejectedValue(new NotFoundException('Device uuid-x not found'));
+      service.findOne.mockRejectedValue(
+        new NotFoundException('Device uuid-x not found'),
+      );
 
-      await expect(controller.findOne('uuid-x')).rejects.toThrow(NotFoundException);
+      await expect(controller.findOne('uuid-x')).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
@@ -127,9 +133,13 @@ describe('DeviceController', () => {
     });
 
     it('propagates NotFoundException from service', async () => {
-      service.update.mockRejectedValue(new NotFoundException('Device uuid-x not found'));
+      service.update.mockRejectedValue(
+        new NotFoundException('Device uuid-x not found'),
+      );
 
-      await expect(controller.update('uuid-x', {})).rejects.toThrow(NotFoundException);
+      await expect(controller.update('uuid-x', {})).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
@@ -144,9 +154,13 @@ describe('DeviceController', () => {
     });
 
     it('propagates NotFoundException from service', async () => {
-      service.remove.mockRejectedValue(new NotFoundException('Device uuid-x not found'));
+      service.remove.mockRejectedValue(
+        new NotFoundException('Device uuid-x not found'),
+      );
 
-      await expect(controller.remove('uuid-x')).rejects.toThrow(NotFoundException);
+      await expect(controller.remove('uuid-x')).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 

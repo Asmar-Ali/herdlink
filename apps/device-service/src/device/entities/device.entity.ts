@@ -43,9 +43,9 @@ export class Device {
   @Column({ type: 'enum', enum: DeviceStatus, default: DeviceStatus.INACTIVE })
   status: DeviceStatus;
 
-  // Logical grouping — a herd, paddock cohort, or farm zone.
+  // Logical grouping — a herd, paddock cohort, or farm zone (opaque string id from upstream).
   // Nullable because a freshly registered device may not be assigned yet.
-  @Column({ type: 'uuid', nullable: true })
+  @Column({ type: 'varchar', length: 128, nullable: true })
   herdId: string | null;
 
   // Last known position — denormalised here for fast "list devices with last position" queries

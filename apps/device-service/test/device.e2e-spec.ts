@@ -1,19 +1,14 @@
-import { INestApplication, VersioningType } from '@nestjs/common';
+import { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { getDataSourceToken } from '@nestjs/typeorm';
 import request from 'supertest';
 import { DataSource } from 'typeorm';
 import { AppModule } from '../src/app.module';
-import { HttpExceptionFilter } from '../src/common/filters/http-exception.filter';
+import { configureApp } from '../src/bootstrap';
+import { CORRELATION_ID_HEADER } from '../src/common/middleware/correlation-id.middleware';
 import { DeviceStatus, DeviceType } from '../src/device/entities/device.entity';
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
-
-function buildApp(app: INestApplication) {
-  app.useGlobalFilters(new HttpExceptionFilter());
-  app.setGlobalPrefix('api');
-  app.enableVersioning({ type: VersioningType.URI, defaultVersion: '1' });
-}
 
 const BASE = '/api/v1/device';
 
@@ -21,6 +16,9 @@ const minimalDto = (suffix: string) => ({
   serialNumber: `SN-E2E-${suffix}`,
   name: `Cow ${suffix}`,
 });
+
+// Pull payload out of the global envelope.
+const payload = <T>(body: { data: T }): T => body.data;
 
 // ─── suite ────────────────────────────────────────────────────────────────────
 
@@ -34,7 +32,7 @@ describe('Device (e2e)', () => {
     }).compile();
 
     app = moduleRef.createNestApplication();
-    buildApp(app);
+    configureApp(app);
     await app.init();
 
     dataSource = moduleRef.get(getDataSourceToken());
@@ -49,6 +47,45 @@ describe('Device (e2e)', () => {
     await app.close();
   });
 
+  // ─── envelope + correlation id ───────────────────────────────────────────
+
+  describe('cross-cutting concerns', () => {
+    it('wraps success responses in { data, meta } and echoes correlation id', async () => {
+      const res = await request(app.getHttpServer())
+        .get(BASE)
+        .set(CORRELATION_ID_HEADER, 'cid-fixed-001')
+        .expect(200);
+
+      expect(res.headers[CORRELATION_ID_HEADER]).toBe('cid-fixed-001');
+      expect(res.body).toHaveProperty('data');
+      expect(res.body).toHaveProperty('meta.timestamp');
+      expect(res.body.meta.correlationId).toBe('cid-fixed-001');
+    });
+
+    it('generates a correlation id when the caller omits one', async () => {
+      const res = await request(app.getHttpServer()).get(BASE).expect(200);
+      expect(res.headers[CORRELATION_ID_HEADER]).toMatch(/^[0-9a-f-]{36}$/i);
+    });
+
+    it('rejects unknown properties with 400 (whitelist)', async () => {
+      const res = await request(app.getHttpServer())
+        .post(BASE)
+        .send({ ...minimalDto('WL'), bogusField: 'nope' })
+        .expect(400);
+
+      expect(res.body.statusCode).toBe(400);
+      expect(JSON.stringify(res.body.message)).toContain('bogusField');
+    });
+
+    it('rejects invalid uuid params with 400 (ParseUUIDPipe)', async () => {
+      const res = await request(app.getHttpServer())
+        .get(`${BASE}/not-a-uuid`)
+        .expect(400);
+
+      expect(res.body.statusCode).toBe(400);
+    });
+  });
+
   // ─── POST /device ────────────────────────────────────────────────────────
 
   describe('POST /api/v1/device', () => {
@@ -58,13 +95,33 @@ describe('Device (e2e)', () => {
         .send(minimalDto('001'))
         .expect(201);
 
-      expect(res.body.id).toBeDefined();
-      expect(res.body.serialNumber).toBe('SN-E2E-001');
-      expect(res.body.name).toBe('Cow 001');
-      expect(res.body.type).toBe(DeviceType.COLLAR_V1);
-      expect(res.body.status).toBe(DeviceStatus.INACTIVE);
-      expect(res.body.metadata).toEqual({});
-      expect(res.body.createdAt).toBeDefined();
+      const body = payload<{
+        id: string;
+        serialNumber: string;
+        name: string;
+        type: DeviceType;
+        status: DeviceStatus;
+        metadata: Record<string, unknown>;
+        createdAt: string;
+      }>(res.body);
+
+      expect(body.id).toBeDefined();
+      expect(body.serialNumber).toBe('SN-E2E-001');
+      expect(body.name).toBe('Cow 001');
+      expect(body.type).toBe(DeviceType.COLLAR_V1);
+      expect(body.status).toBe(DeviceStatus.INACTIVE);
+      expect(body.metadata).toEqual({});
+      expect(body.createdAt).toBeDefined();
+    });
+
+    it('400 — missing required field fails validation', async () => {
+      const res = await request(app.getHttpServer())
+        .post(BASE)
+        .send({ name: 'no serial here' })
+        .expect(400);
+
+      expect(res.body.statusCode).toBe(400);
+      expect(JSON.stringify(res.body.message)).toContain('serialNumber');
     });
 
     it('409 — duplicate serialNumber returns Conflict', async () => {
@@ -80,6 +137,7 @@ describe('Device (e2e)', () => {
       expect(res.body.message).toContain('SN-E2E-DUP');
       expect(res.body.path).toBe(BASE);
       expect(res.body.timestamp).toBeDefined();
+      expect(res.body.correlationId).toBeDefined();
     });
   });
 
@@ -88,7 +146,7 @@ describe('Device (e2e)', () => {
   describe('GET /api/v1/device', () => {
     it('200 — returns empty array when no devices', async () => {
       const res = await request(app.getHttpServer()).get(BASE).expect(200);
-      expect(res.body).toEqual([]);
+      expect(payload(res.body)).toEqual([]);
     });
 
     it('200 — returns all devices ordered by createdAt DESC', async () => {
@@ -96,11 +154,12 @@ describe('Device (e2e)', () => {
       await request(app.getHttpServer()).post(BASE).send(minimalDto('B'));
 
       const res = await request(app.getHttpServer()).get(BASE).expect(200);
+      const list = payload<Array<{ serialNumber: string }>>(res.body);
 
-      expect(res.body).toHaveLength(2);
+      expect(list).toHaveLength(2);
       // DESC order: B was created last
-      expect(res.body[0].serialNumber).toBe('SN-E2E-B');
-      expect(res.body[1].serialNumber).toBe('SN-E2E-A');
+      expect(list[0].serialNumber).toBe('SN-E2E-B');
+      expect(list[1].serialNumber).toBe('SN-E2E-A');
     });
   });
 
@@ -108,16 +167,18 @@ describe('Device (e2e)', () => {
 
   describe('GET /api/v1/device/:id', () => {
     it('200 — returns the device by id', async () => {
-      const created = (
-        await request(app.getHttpServer()).post(BASE).send(minimalDto('002'))
-      ).body;
+      const created = payload<{ id: string }>(
+        (await request(app.getHttpServer()).post(BASE).send(minimalDto('002')))
+          .body,
+      );
 
       const res = await request(app.getHttpServer())
         .get(`${BASE}/${created.id}`)
         .expect(200);
 
-      expect(res.body.id).toBe(created.id);
-      expect(res.body.serialNumber).toBe('SN-E2E-002');
+      const body = payload<{ id: string; serialNumber: string }>(res.body);
+      expect(body.id).toBe(created.id);
+      expect(body.serialNumber).toBe('SN-E2E-002');
     });
 
     it('404 — unknown id returns Not Found with correct shape', async () => {
@@ -135,18 +196,24 @@ describe('Device (e2e)', () => {
 
   describe('PATCH /api/v1/device/:id', () => {
     it('200 — updates allowed fields', async () => {
-      const created = (
-        await request(app.getHttpServer()).post(BASE).send(minimalDto('003'))
-      ).body;
+      const created = payload<{ id: string }>(
+        (await request(app.getHttpServer()).post(BASE).send(minimalDto('003')))
+          .body,
+      );
 
       const res = await request(app.getHttpServer())
         .patch(`${BASE}/${created.id}`)
         .send({ name: 'Renamed Cow', batteryLevel: 87 })
         .expect(200);
 
-      expect(res.body.name).toBe('Renamed Cow');
-      expect(res.body.batteryLevel).toBe(87);
-      expect(res.body.serialNumber).toBe('SN-E2E-003'); // unchanged
+      const body = payload<{
+        name: string;
+        batteryLevel: number;
+        serialNumber: string;
+      }>(res.body);
+      expect(body.name).toBe('Renamed Cow');
+      expect(body.batteryLevel).toBe(87);
+      expect(body.serialNumber).toBe('SN-E2E-003'); // unchanged
     });
 
     it('404 — patching unknown id returns Not Found', async () => {
@@ -159,9 +226,10 @@ describe('Device (e2e)', () => {
     });
 
     it('422 — cannot decommission an ACTIVE device directly', async () => {
-      const created = (
-        await request(app.getHttpServer()).post(BASE).send(minimalDto('004'))
-      ).body;
+      const created = payload<{ id: string }>(
+        (await request(app.getHttpServer()).post(BASE).send(minimalDto('004')))
+          .body,
+      );
 
       // make it ACTIVE first
       await request(app.getHttpServer())
@@ -182,9 +250,10 @@ describe('Device (e2e)', () => {
 
   describe('DELETE /api/v1/device/:id', () => {
     it('200 — deletes an inactive device', async () => {
-      const created = (
-        await request(app.getHttpServer()).post(BASE).send(minimalDto('005'))
-      ).body;
+      const created = payload<{ id: string }>(
+        (await request(app.getHttpServer()).post(BASE).send(minimalDto('005')))
+          .body,
+      );
 
       await request(app.getHttpServer())
         .delete(`${BASE}/${created.id}`)
@@ -205,9 +274,10 @@ describe('Device (e2e)', () => {
     });
 
     it('422 — cannot delete an ACTIVE device', async () => {
-      const created = (
-        await request(app.getHttpServer()).post(BASE).send(minimalDto('006'))
-      ).body;
+      const created = payload<{ id: string }>(
+        (await request(app.getHttpServer()).post(BASE).send(minimalDto('006')))
+          .body,
+      );
 
       await request(app.getHttpServer())
         .patch(`${BASE}/${created.id}`)

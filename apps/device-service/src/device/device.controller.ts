@@ -1,15 +1,16 @@
 import {
-  Controller,
-  Get,
-  Post,
   Body,
-  Patch,
-  Param,
+  Controller,
   Delete,
+  Get,
+  Param,
+  ParseUUIDPipe,
+  Patch,
+  Post,
 } from '@nestjs/common';
-import { DeviceService } from './device.service';
-import { CreateDeviceDto } from './dto/create-device.dto';
-import { UpdateDeviceDto } from './dto/update-device.dto';
+import { DeviceService } from './device.service.js';
+import { CreateDeviceDto } from './dto/create-device.dto.js';
+import { UpdateDeviceDto } from './dto/update-device.dto.js';
 
 @Controller({ path: 'device', version: '1' })
 export class DeviceController {
@@ -26,17 +27,20 @@ export class DeviceController {
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
+  findOne(@Param('id', ParseUUIDPipe) id: string) {
     return this.deviceService.findOne(id);
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateDeviceDto: UpdateDeviceDto) {
+  update(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() updateDeviceDto: UpdateDeviceDto,
+  ) {
     return this.deviceService.update(id, updateDeviceDto);
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string) {
+  remove(@Param('id', ParseUUIDPipe) id: string) {
     return this.deviceService.remove(id);
   }
 }

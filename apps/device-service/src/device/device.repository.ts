@@ -48,6 +48,41 @@ export class DeviceRepository {
     }
   }
 
+  count(): Promise<number> {
+    return this.repo.count();
+  }
+
+  /**
+   * Batch insert for dev seeding. Does not run per-row conflict handling;
+   * callers must ensure the table is empty or serials are unique.
+   */
+  async bulkCreate(inputs: DeepPartial<Device>[]): Promise<number> {
+    if (inputs.length === 0) {
+      return 0;
+    }
+
+    const CHUNK_SIZE = 250;
+    let inserted = 0;
+
+    for (let offset = 0; offset < inputs.length; offset += CHUNK_SIZE) {
+      const entities = inputs
+        .slice(offset, offset + CHUNK_SIZE)
+        .map((input) =>
+          this.repo.create({
+            type: DeviceType.COLLAR_V1,
+            status: DeviceStatus.INACTIVE,
+            metadata: input.metadata ?? {},
+            ...input,
+          }),
+        );
+
+      const saved = await this.repo.save(entities);
+      inserted += saved.length;
+    }
+
+    return inserted;
+  }
+
   findAll(): Promise<Device[]> {
     return this.repo.find({ order: { createdAt: 'DESC' } });
   }

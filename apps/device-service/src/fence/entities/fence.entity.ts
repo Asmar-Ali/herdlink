@@ -49,7 +49,7 @@ export class Geofence {
   breachDirection: BreachDirection;
 
   // The polygon itself — uses GeoJSON so MongoDB's $geoIntersects / $geoWithin work natively.
-  @Prop({ type: GeoJSONPolygonSchema, required: true, index: '2dsphere' })
+  @Prop({ type: GeoJSONPolygonSchema, required: true })
   geometry: GeoJSONPolygon;
 
   // Soft-disable a fence without deleting it (e.g. seasonal paddocks).

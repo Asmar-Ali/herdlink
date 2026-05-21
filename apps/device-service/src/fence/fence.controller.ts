@@ -1,15 +1,16 @@
 import {
-  Controller,
-  Get,
-  Post,
   Body,
-  Patch,
-  Param,
+  Controller,
   Delete,
+  Get,
+  Param,
+  Patch,
+  Post,
 } from '@nestjs/common';
-import { FenceService } from './fence.service';
-import { CreateFenceDto } from './dto/create-fence.dto';
-import { UpdateFenceDto } from './dto/update-fence.dto';
+import { ParseObjectIdPipe } from '../common/pipes/parse-object-id.pipe.js';
+import { CreateFenceDto } from './dto/create-fence.dto.js';
+import { UpdateFenceDto } from './dto/update-fence.dto.js';
+import { FenceService } from './fence.service.js';
 
 @Controller({ path: 'fence', version: '1' })
 export class FenceController {
@@ -26,17 +27,20 @@ export class FenceController {
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.fenceService.findOne(+id);
+  findOne(@Param('id', ParseObjectIdPipe) id: string) {
+    return this.fenceService.findOne(id);
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateFenceDto: UpdateFenceDto) {
-    return this.fenceService.update(+id, updateFenceDto);
+  update(
+    @Param('id', ParseObjectIdPipe) id: string,
+    @Body() updateFenceDto: UpdateFenceDto,
+  ) {
+    return this.fenceService.update(id, updateFenceDto);
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.fenceService.remove(+id);
+  remove(@Param('id', ParseObjectIdPipe) id: string) {
+    return this.fenceService.remove(id);
   }
 }

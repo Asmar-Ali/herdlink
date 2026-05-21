@@ -44,7 +44,7 @@ volumes:
   kafka-data:
   prometheus-data:
   grafana-data:
-  jaeger-data:
+  jaeger-data: 
   pgadmin-data:
   mosquitto-data:
   mosquitto-log:
@@ -275,6 +275,8 @@ services:
       POSTGRES_USER: herdlink
       POSTGRES_PASSWORD: herdlink_dev
       POSTGRES_DB: herdlink
+      SEED_DEVICES: "true"
+      SEED_DEVICE_COUNT: "1000"
     depends_on:
       mongodb:
         condition: service_healthy

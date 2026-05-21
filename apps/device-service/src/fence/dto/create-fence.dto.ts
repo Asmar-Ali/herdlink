@@ -5,6 +5,7 @@ import {
   Equals,
   IsArray,
   IsBoolean,
+  IsDefined,
   IsEnum,
   IsInt,
   IsObject,
@@ -51,6 +52,7 @@ export class CreateFenceDto {
   @IsEnum(BreachDirection)
   breachDirection?: BreachDirection;
 
+  @IsDefined()
   @ValidateNested()
   @Type(() => GeoJSONPolygonDto)
   geometry: GeoJSONPolygonDto;

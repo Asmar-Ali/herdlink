@@ -1,26 +1,41 @@
-import { Injectable } from '@nestjs/common';
-import { CreateFenceDto } from './dto/create-fence.dto';
-import { UpdateFenceDto } from './dto/update-fence.dto';
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { CreateFenceDto } from './dto/create-fence.dto.js';
+import { UpdateFenceDto } from './dto/update-fence.dto.js';
+import { FenceRepository } from './fence.repository.js';
+import type { FenceResponse } from './fence.types.js';
 
 @Injectable()
 export class FenceService {
-  create(_createFenceDto: CreateFenceDto) {
-    return 'This action adds a new fence';
+  constructor(private readonly fenceRepository: FenceRepository) {}
+
+  create(dto: CreateFenceDto): Promise<FenceResponse> {
+    return this.fenceRepository.create(dto);
   }
 
-  findAll() {
-    return `This action returns all fence`;
+  findAll(): Promise<FenceResponse[]> {
+    return this.fenceRepository.findAll();
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} fence`;
+  async findOne(id: string): Promise<FenceResponse> {
+    const fence = await this.fenceRepository.findById(id);
+    if (!fence) {
+      throw new NotFoundException(`Fence ${id} not found`);
+    }
+    return fence;
   }
 
-  update(id: number, _updateFenceDto: UpdateFenceDto) {
-    return `This action updates a #${id} fence`;
+  async update(id: string, dto: UpdateFenceDto): Promise<FenceResponse> {
+    const fence = await this.fenceRepository.update(id, dto);
+    if (!fence) {
+      throw new NotFoundException(`Fence ${id} not found`);
+    }
+    return fence;
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} fence`;
+  async remove(id: string): Promise<void> {
+    const deleted = await this.fenceRepository.remove(id);
+    if (!deleted) {
+      throw new NotFoundException(`Fence ${id} not found`);
+    }
   }
 }

@@ -1,8 +1,10 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
-import { FenceController } from './fence.controller';
-import { FenceService } from './fence.service';
-import { Geofence, GeofenceSchema } from './entities/fence.entity';
+import { Geofence, GeofenceSchema } from './entities/fence.entity.js';
+import { FenceController } from './fence.controller.js';
+import { FenceRepository } from './fence.repository.js';
+import { FenceSeedService } from './fence-seed.service.js';
+import { FenceService } from './fence.service.js';
 
 @Module({
   imports: [
@@ -11,6 +13,6 @@ import { Geofence, GeofenceSchema } from './entities/fence.entity';
     ]),
   ],
   controllers: [FenceController],
-  providers: [FenceService],
+  providers: [FenceService, FenceRepository, FenceSeedService],
 })
 export class FenceModule {}

@@ -29,6 +29,7 @@ describe('DeviceRepository', () => {
     create: jest.fn(),
     save: jest.fn(),
     find: jest.fn(),
+    findAndCount: jest.fn(),
     findOne: jest.fn(),
     merge: jest.fn(),
     delete: jest.fn(),
@@ -124,20 +125,24 @@ describe('DeviceRepository', () => {
     });
   });
 
-  // ─── findAll ──────────────────────────────────────────────────────────────
+  // ─── findPage ─────────────────────────────────────────────────────────────
 
-  describe('findAll', () => {
-    it('returns all devices ordered by createdAt DESC', async () => {
+  describe('findPage', () => {
+    it('returns a page of devices ordered by createdAt DESC', async () => {
       const devices = [
         makeDevice({ id: 'uuid-2' }),
         makeDevice({ id: 'uuid-1' }),
       ];
-      repo.find.mockResolvedValue(devices);
+      repo.findAndCount.mockResolvedValue([devices, 5]);
 
-      const result = await deviceRepository.findAll();
+      const result = await deviceRepository.findPage(2, 2);
 
-      expect(repo.find).toHaveBeenCalledWith({ order: { createdAt: 'DESC' } });
-      expect(result).toBe(devices);
+      expect(repo.findAndCount).toHaveBeenCalledWith({
+        order: { createdAt: 'DESC' },
+        skip: 2,
+        take: 2,
+      });
+      expect(result).toEqual({ items: devices, total: 5 });
     });
   });
 

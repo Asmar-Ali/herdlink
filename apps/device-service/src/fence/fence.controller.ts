@@ -6,7 +6,9 @@ import {
   Param,
   Patch,
   Post,
+  Query,
 } from '@nestjs/common';
+import { PaginationQueryDto } from '../common/dto/pagination-query.dto.js';
 import { ParseObjectIdPipe } from '../common/pipes/parse-object-id.pipe.js';
 import { CreateFenceDto } from './dto/create-fence.dto.js';
 import { UpdateFenceDto } from './dto/update-fence.dto.js';
@@ -22,8 +24,8 @@ export class FenceController {
   }
 
   @Get()
-  findAll() {
-    return this.fenceService.findAll();
+  findAll(@Query() query: PaginationQueryDto) {
+    return this.fenceService.findAll(query);
   }
 
   @Get(':id')

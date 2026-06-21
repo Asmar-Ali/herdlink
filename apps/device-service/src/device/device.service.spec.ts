@@ -1,5 +1,6 @@
 import { NotFoundException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
+import { PaginationQueryDto } from '../common/dto/pagination-query.dto.js';
 import { DeviceRepository } from './device.repository';
 import { DeviceService } from './device.service';
 import { CreateDeviceDto } from './dto/create-device.dto';
@@ -35,7 +36,7 @@ describe('DeviceService', () => {
           provide: DeviceRepository,
           useValue: {
             create: jest.fn(),
-            findAll: jest.fn(),
+            findPage: jest.fn(),
             findById: jest.fn(),
             update: jest.fn(),
             remove: jest.fn(),
@@ -79,17 +80,26 @@ describe('DeviceService', () => {
   // ─── findAll ──────────────────────────────────────────────────────────────
 
   describe('findAll', () => {
-    it('returns all devices from repository', async () => {
+    it('returns paginated devices from repository', async () => {
       const devices = [
         makeDevice({ id: 'uuid-1' }),
         makeDevice({ id: 'uuid-2' }),
       ];
-      repo.findAll.mockResolvedValue(devices);
+      repo.findPage.mockResolvedValue({ items: devices, total: 5 });
 
-      const result = await service.findAll();
+      const query: PaginationQueryDto = { page: 2, limit: 2 };
+      const result = await service.findAll(query);
 
-      expect(repo.findAll).toHaveBeenCalledTimes(1);
-      expect(result).toBe(devices);
+      expect(repo.findPage).toHaveBeenCalledWith(2, 2);
+      expect(result).toEqual({
+        items: devices,
+        pagination: {
+          page: 2,
+          limit: 2,
+          total: 5,
+          totalPages: 3,
+        },
+      });
     });
   });
 

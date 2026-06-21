@@ -1,5 +1,6 @@
 import { NotFoundException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
+import { PaginationQueryDto } from '../common/dto/pagination-query.dto.js';
 import { DeviceController } from './device.controller';
 import { DeviceService } from './device.service';
 import { CreateDeviceDto } from './dto/create-device.dto';
@@ -80,17 +81,18 @@ describe('DeviceController', () => {
   // ─── findAll ──────────────────────────────────────────────────────────────
 
   describe('findAll', () => {
-    it('returns all devices from service', async () => {
-      const devices = [
-        makeDevice({ id: 'uuid-1' }),
-        makeDevice({ id: 'uuid-2' }),
-      ];
-      service.findAll.mockResolvedValue(devices);
+    it('returns paginated devices from service', async () => {
+      const paginated = {
+        items: [makeDevice({ id: 'uuid-1' }), makeDevice({ id: 'uuid-2' })],
+        pagination: { page: 1, limit: 20, total: 2, totalPages: 1 },
+      };
+      service.findAll.mockResolvedValue(paginated);
 
-      const result = await controller.findAll();
+      const query: PaginationQueryDto = { page: 1, limit: 20 };
+      const result = await controller.findAll(query);
 
-      expect(service.findAll).toHaveBeenCalledTimes(1);
-      expect(result).toBe(devices);
+      expect(service.findAll).toHaveBeenCalledWith(query);
+      expect(result).toBe(paginated);
     });
   });
 
@@ -167,9 +169,12 @@ describe('DeviceController', () => {
   // ─── isolation ────────────────────────────────────────────────────────────
 
   it('does not call unrelated service methods on findAll', async () => {
-    service.findAll.mockResolvedValue([]);
+    service.findAll.mockResolvedValue({
+      items: [],
+      pagination: { page: 1, limit: 20, total: 0, totalPages: 0 },
+    });
 
-    await controller.findAll();
+    await controller.findAll({});
 
     expect(service.create).not.toHaveBeenCalled();
     expect(service.findOne).not.toHaveBeenCalled();

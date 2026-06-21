@@ -26,6 +26,7 @@ describe('FenceRepository', () => {
   let model: {
     create: jest.Mock;
     find: jest.Mock;
+    countDocuments: jest.Mock;
     findById: jest.Mock;
     findByIdAndUpdate: jest.Mock;
     findByIdAndDelete: jest.Mock;
@@ -69,11 +70,14 @@ describe('FenceRepository', () => {
   beforeEach(async () => {
     const chain = {
       sort: jest.fn().mockReturnThis(),
+      skip: jest.fn().mockReturnThis(),
+      limit: jest.fn().mockReturnThis(),
       exec: jest.fn(),
     };
     model = {
       create: jest.fn(),
       find: jest.fn().mockReturnValue(chain),
+      countDocuments: jest.fn().mockReturnValue({ exec: jest.fn() }),
       findById: jest.fn().mockReturnValue({ exec: jest.fn() }),
       findByIdAndUpdate: jest.fn().mockReturnValue({ exec: jest.fn() }),
       findByIdAndDelete: jest.fn().mockReturnValue({ exec: jest.fn() }),
@@ -134,18 +138,22 @@ describe('FenceRepository', () => {
     });
   });
 
-  describe('findAll', () => {
-    it('returns fences ordered by createdAt desc', async () => {
+  describe('findPage', () => {
+    it('returns a page of fences ordered by createdAt desc', async () => {
       const doc = makeDoc();
       const chain = model.find();
       chain.exec.mockResolvedValue([doc]);
+      model.countDocuments().exec.mockResolvedValue(3);
 
-      const result = await repository.findAll();
+      const result = await repository.findPage(2, 1);
 
       expect(model.find).toHaveBeenCalled();
       expect(chain.sort).toHaveBeenCalledWith({ createdAt: -1 });
-      expect(result).toHaveLength(1);
-      expect(result[0].id).toBe(doc._id.toString());
+      expect(chain.skip).toHaveBeenCalledWith(1);
+      expect(chain.limit).toHaveBeenCalledWith(1);
+      expect(result.items).toHaveLength(1);
+      expect(result.items[0].id).toBe(doc._id.toString());
+      expect(result.total).toBe(3);
     });
   });
 

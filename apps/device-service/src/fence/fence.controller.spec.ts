@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { PaginationQueryDto } from '../common/dto/pagination-query.dto.js';
 import { CreateFenceDto } from './dto/create-fence.dto.js';
 import { UpdateFenceDto } from './dto/update-fence.dto.js';
 import { FenceController } from './fence.controller.js';
@@ -70,13 +71,17 @@ describe('FenceController', () => {
   });
 
   describe('findAll', () => {
-    it('calls service.findAll with no args and returns result by reference', async () => {
-      const expected = [{ id: objectId }, { id: '507f1f77bcf86cd799439012' }];
+    it('calls service.findAll with query and returns result by reference', async () => {
+      const expected = {
+        items: [{ id: objectId }, { id: '507f1f77bcf86cd799439012' }],
+        pagination: { page: 1, limit: 20, total: 2, totalPages: 1 },
+      };
       service.findAll.mockResolvedValue(expected as never);
 
-      const result = await controller.findAll();
+      const query: PaginationQueryDto = { page: 1, limit: 20 };
+      const result = await controller.findAll(query);
 
-      expect(service.findAll).toHaveBeenCalledTimes(1);
+      expect(service.findAll).toHaveBeenCalledWith(query);
       expect(result).toBe(expected);
     });
   });

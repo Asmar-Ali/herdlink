@@ -1,6 +1,6 @@
 ---
 description: Database design, polyglot persistence boundaries, and data modeling decisions for HerdLink
-globs: services/**/schema/**/*.ts,services/**/migrations/**/*.ts,services/**/migrations/**/*.sql,services/**/*entity*.ts,services/**/*model*.ts,services/**/*schema*.ts,services/**/*.prisma
+globs: apps/**/schema/**/*.ts,apps/**/migrations/**/*.ts,apps/**/migrations/**/*.sql,apps/**/*entity*.ts,apps/**/*model*.ts,apps/**/*schema*.ts,apps/**/*.prisma
 alwaysApply: false
 ---
 

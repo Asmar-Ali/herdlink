@@ -70,12 +70,25 @@ export class FenceRepository {
     return docs.length;
   }
 
-  async findAll(): Promise<FenceResponse[]> {
-    const docs = await this.geofenceModel
-      .find()
-      .sort({ createdAt: -1 })
-      .exec();
-    return docs.map((doc) => this.toResponse(doc));
+  async findPage(
+    page: number,
+    limit: number,
+  ): Promise<{ items: FenceResponse[]; total: number }> {
+    const skip = (page - 1) * limit;
+    const [docs, total] = await Promise.all([
+      this.geofenceModel
+        .find()
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .exec(),
+      this.geofenceModel.countDocuments().exec(),
+    ]);
+
+    return {
+      items: docs.map((doc) => this.toResponse(doc)),
+      total,
+    };
   }
 
   async findById(id: string): Promise<FenceResponse | null> {

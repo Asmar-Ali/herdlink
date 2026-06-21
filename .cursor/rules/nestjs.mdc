@@ -1,6 +1,6 @@
 ---
 description: NestJS architecture, DI, module structure, and testing conventions for HerdLink services
-globs: services/**/*.module.ts,services/**/*.controller.ts,services/**/*.service.ts,services/**/*.resolver.ts,services/**/*.gateway.ts,services/**/*.consumer.ts
+globs: apps/**/*.module.ts,apps/**/*.controller.ts,apps/**/*.service.ts,apps/**/*.resolver.ts,apps/**/*.gateway.ts,apps/**/*.consumer.ts
 alwaysApply: false
 ---
 

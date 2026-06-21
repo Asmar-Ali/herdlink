@@ -1,6 +1,6 @@
 ---
 description: Reliability, scalability, observability, and performance targets for HerdLink production-grade behaviour
-globs: services/**/*.ts,docker-compose*.yml,.k6/**/*.js,observability/**/*
+globs: apps/**/*.ts,docker-compose*.yml,.k6/**/*.js,observability/**/*
 alwaysApply: false
 ---
 

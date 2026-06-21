@@ -1,5 +1,6 @@
 import { NotFoundException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
+import { PaginationQueryDto } from '../common/dto/pagination-query.dto.js';
 import { CreateFenceDto } from './dto/create-fence.dto.js';
 import { UpdateFenceDto } from './dto/update-fence.dto.js';
 import { BreachDirection, GeofenceType } from './entities/fence.entity.js';
@@ -46,7 +47,7 @@ describe('FenceService', () => {
           provide: FenceRepository,
           useValue: {
             create: jest.fn(),
-            findAll: jest.fn(),
+            findPage: jest.fn(),
             findById: jest.fn(),
             update: jest.fn(),
             remove: jest.fn(),
@@ -83,12 +84,23 @@ describe('FenceService', () => {
   });
 
   describe('findAll', () => {
-    it('delegates to repository', async () => {
+    it('returns paginated fences from repository', async () => {
       const fences = [makeFence(), makeFence({ id: '507f1f77bcf86cd799439012' })];
-      repo.findAll.mockResolvedValue(fences);
+      repo.findPage.mockResolvedValue({ items: fences, total: 4 });
 
-      await expect(service.findAll()).resolves.toBe(fences);
-      expect(repo.findAll).toHaveBeenCalled();
+      const query: PaginationQueryDto = { page: 1, limit: 2 };
+      const result = await service.findAll(query);
+
+      expect(repo.findPage).toHaveBeenCalledWith(1, 2);
+      expect(result).toEqual({
+        items: fences,
+        pagination: {
+          page: 1,
+          limit: 2,
+          total: 4,
+          totalPages: 2,
+        },
+      });
     });
   });
 

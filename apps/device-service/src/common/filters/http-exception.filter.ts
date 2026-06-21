@@ -7,7 +7,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { Request, Response } from 'express';
-import { RequestContext } from '../context/request-context.js';
+import { RequestContext } from '@herdlink/observability';
 
 export interface ErrorResponse {
   statusCode: number;

@@ -1,4 +1,10 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  normalizePagination,
+  PaginationQueryDto,
+} from '../common/dto/pagination-query.dto.js';
+import { buildPaginatedResult } from '../common/pagination/pagination.types.js';
+import type { PaginatedResult } from '../common/pagination/pagination.types.js';
 import { DeviceRepository } from './device.repository.js';
 import { CreateDeviceDto } from './dto/create-device.dto.js';
 import { UpdateDeviceDto } from './dto/update-device.dto.js';
@@ -12,8 +18,13 @@ export class DeviceService {
     return this.deviceRepository.create(dto);
   }
 
-  findAll(): Promise<Device[]> {
-    return this.deviceRepository.findAll();
+  async findAll(
+    query: PaginationQueryDto,
+  ): Promise<PaginatedResult<Device>> {
+    const { page, limit } = normalizePagination(query);
+    const { items, total } = await this.deviceRepository.findPage(page, limit);
+
+    return buildPaginatedResult(items, total, page, limit);
   }
 
   async findOne(id: string): Promise<Device> {

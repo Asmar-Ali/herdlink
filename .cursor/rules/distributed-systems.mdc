@@ -1,6 +1,6 @@
 ---
 description: Distributed systems patterns — idempotency, sagas, outbox, tracing, consistency for HerdLink
-globs: services/**/*consumer*.ts,services/**/*producer*.ts,services/**/*outbox*.ts,services/**/*saga*.ts,services/**/*alerting*.ts,services/**/*ingestion*.ts
+globs: apps/**/*consumer*.ts,apps/**/*producer*.ts,apps/**/*outbox*.ts,apps/**/*saga*.ts,apps/**/*alerting*.ts,apps/**/*ingestion*.ts
 alwaysApply: false
 ---
 

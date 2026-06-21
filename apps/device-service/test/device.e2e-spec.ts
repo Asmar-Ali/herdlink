@@ -5,7 +5,7 @@ import request from 'supertest';
 import { DataSource } from 'typeorm';
 import { AppModule } from '../src/app.module';
 import { configureApp } from '../src/bootstrap';
-import { CORRELATION_ID_HEADER } from '../src/common/middleware/correlation-id.middleware';
+import { CORRELATION_ID_HEADER } from '@herdlink/observability';
 import { DeviceStatus, DeviceType } from '../src/device/entities/device.entity';
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
@@ -144,22 +144,77 @@ describe('Device (e2e)', () => {
   // ─── GET /device ─────────────────────────────────────────────────────────
 
   describe('GET /api/v1/device', () => {
-    it('200 — returns empty array when no devices', async () => {
+    it('200 — returns empty paginated result when no devices', async () => {
       const res = await request(app.getHttpServer()).get(BASE).expect(200);
-      expect(payload(res.body)).toEqual([]);
+      expect(payload(res.body)).toEqual({
+        items: [],
+        pagination: {
+          page: 1,
+          limit: 20,
+          total: 0,
+          totalPages: 0,
+        },
+      });
     });
 
-    it('200 — returns all devices ordered by createdAt DESC', async () => {
+    it('200 — returns devices ordered by createdAt DESC', async () => {
       await request(app.getHttpServer()).post(BASE).send(minimalDto('A'));
       await request(app.getHttpServer()).post(BASE).send(minimalDto('B'));
 
       const res = await request(app.getHttpServer()).get(BASE).expect(200);
-      const list = payload<Array<{ serialNumber: string }>>(res.body);
+      const body = payload<{
+        items: Array<{ serialNumber: string }>;
+        pagination: { total: number };
+      }>(res.body);
 
-      expect(list).toHaveLength(2);
+      expect(body.items).toHaveLength(2);
+      expect(body.pagination.total).toBe(2);
       // DESC order: B was created last
-      expect(list[0].serialNumber).toBe('SN-E2E-B');
-      expect(list[1].serialNumber).toBe('SN-E2E-A');
+      expect(body.items[0].serialNumber).toBe('SN-E2E-B');
+      expect(body.items[1].serialNumber).toBe('SN-E2E-A');
+    });
+
+    it('200 — paginates with page and limit query params', async () => {
+      await request(app.getHttpServer()).post(BASE).send(minimalDto('1'));
+      await request(app.getHttpServer()).post(BASE).send(minimalDto('2'));
+      await request(app.getHttpServer()).post(BASE).send(minimalDto('3'));
+
+      const page1 = payload<{
+        items: Array<{ serialNumber: string }>;
+        pagination: { page: number; limit: number; total: number; totalPages: number };
+      }>(
+        (await request(app.getHttpServer()).get(`${BASE}?page=1&limit=2`)).body,
+      );
+
+      expect(page1.items).toHaveLength(2);
+      expect(page1.pagination).toEqual({
+        page: 1,
+        limit: 2,
+        total: 3,
+        totalPages: 2,
+      });
+      expect(page1.items[0].serialNumber).toBe('SN-E2E-3');
+      expect(page1.items[1].serialNumber).toBe('SN-E2E-2');
+
+      const page2 = payload<{
+        items: Array<{ serialNumber: string }>;
+        pagination: { page: number; totalPages: number };
+      }>(
+        (await request(app.getHttpServer()).get(`${BASE}?page=2&limit=2`)).body,
+      );
+
+      expect(page2.items).toHaveLength(1);
+      expect(page2.pagination.page).toBe(2);
+      expect(page2.pagination.totalPages).toBe(2);
+      expect(page2.items[0].serialNumber).toBe('SN-E2E-1');
+    });
+
+    it('400 — rejects invalid pagination query params', async () => {
+      const res = await request(app.getHttpServer())
+        .get(`${BASE}?page=0&limit=500`)
+        .expect(400);
+
+      expect(res.body.statusCode).toBe(400);
     });
   });
 

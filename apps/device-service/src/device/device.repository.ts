@@ -83,8 +83,18 @@ export class DeviceRepository {
     return inserted;
   }
 
-  findAll(): Promise<Device[]> {
-    return this.repo.find({ order: { createdAt: 'DESC' } });
+  async findPage(
+    page: number,
+    limit: number,
+  ): Promise<{ items: Device[]; total: number }> {
+    const skip = (page - 1) * limit;
+    const [items, total] = await this.repo.findAndCount({
+      order: { createdAt: 'DESC' },
+      skip,
+      take: limit,
+    });
+
+    return { items, total };
   }
 
   findById(id: string): Promise<Device | null> {

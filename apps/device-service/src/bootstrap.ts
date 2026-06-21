@@ -1,3 +1,4 @@
+import { TracingInterceptor } from '@herdlink/observability';
 import {
   INestApplication,
   ValidationPipe,
@@ -5,7 +6,6 @@ import {
 } from '@nestjs/common';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter.js';
 import { ResponseInterceptor } from './common/interceptors/response.interceptor.js';
-import { TracingInterceptor } from './common/interceptors/tracing.interceptor.js';
 
 /**
  * Single source of truth for global app wiring so main.ts and the e2e
@@ -32,7 +32,7 @@ export function configureApp(app: INestApplication): INestApplication {
   // Order matters: tracing opens the span / AsyncLocalStorage context,
   // response wraps the payload, filter shapes any error before either runs.
   app.useGlobalInterceptors(
-    new TracingInterceptor(),
+    app.get(TracingInterceptor),
     new ResponseInterceptor(),
   );
   app.useGlobalFilters(new HttpExceptionFilter());

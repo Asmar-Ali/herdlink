@@ -1,6 +1,6 @@
 ---
 description: Node.js runtime conventions, async patterns, and performance idioms for HerdLink services
-globs: services/**/*.ts,packages/**/*.ts,apps/**/*.ts
+globs: apps/**/*.ts,libs/**/*.ts
 alwaysApply: false
 ---
 

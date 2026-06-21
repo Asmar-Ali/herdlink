@@ -1,6 +1,6 @@
 ---
 description: PostgreSQL and TimescaleDB query patterns, transactions, and performance for HerdLink telemetry
-globs: services/**/*repository*.ts,services/**/*.sql,services/**/migrations/**/*.ts,services/**/migrations/**/*.sql,services/ingestion-service/**/*.ts,services/device-service/**/*.ts
+globs: apps/**/*repository*.ts,apps/**/*.sql,apps/**/migrations/**/*.ts,apps/**/migrations/**/*.sql,apps/ingestion-service/**/*.ts,apps/device-service/**/*.ts
 alwaysApply: false
 ---
 

@@ -6,10 +6,9 @@ export interface RequestContextStore {
 }
 
 /**
- * Per-request store. The CorrelationIdMiddleware stamps the id, the
- * TracingInterceptor runs everything below the handler inside `.run(...)`,
- * so any service / repository / logger picked up via `RequestContext.get()`
- * sees the same correlation id without explicit plumbing.
+ * Per-request store. CorrelationIdMiddleware stamps the id; TracingInterceptor
+ * runs handler code inside `.run(...)` so logs and spans share the same context
+ * without parameter drilling.
  */
 export const requestContextStorage =
   new AsyncLocalStorage<RequestContextStore>();

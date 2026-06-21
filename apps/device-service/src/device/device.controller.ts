@@ -7,7 +7,9 @@ import {
   ParseUUIDPipe,
   Patch,
   Post,
+  Query,
 } from '@nestjs/common';
+import { PaginationQueryDto } from '../common/dto/pagination-query.dto.js';
 import { DeviceService } from './device.service.js';
 import { CreateDeviceDto } from './dto/create-device.dto.js';
 import { UpdateDeviceDto } from './dto/update-device.dto.js';
@@ -22,8 +24,8 @@ export class DeviceController {
   }
 
   @Get()
-  findAll() {
-    return this.deviceService.findAll();
+  findAll(@Query() query: PaginationQueryDto) {
+    return this.deviceService.findAll(query);
   }
 
   @Get(':id')

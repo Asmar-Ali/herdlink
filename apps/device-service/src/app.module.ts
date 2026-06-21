@@ -1,8 +1,11 @@
+import {
+  CorrelationIdMiddleware,
+  ObservabilityModule,
+} from '@herdlink/observability';
 import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { CorrelationIdMiddleware } from './common/middleware/correlation-id.middleware.js';
 import { validateEnv } from './config/validate-env.js';
 import { createMongooseOptions } from './database/mongoose.config.js';
 import { createTypeOrmOptions } from './database/typeorm.config.js';
@@ -11,6 +14,7 @@ import { FenceModule } from './fence/fence.module.js';
 
 @Module({
   imports: [
+    ObservabilityModule.forRoot({ serviceName: 'device-service' }),
     ConfigModule.forRoot({ isGlobal: true, validate: validateEnv }),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],

@@ -1,6 +1,6 @@
 ---
 description: Kafka producer/consumer patterns, partitioning, schemas, and reliability for HerdLink event backbone
-globs: services/**/*kafka*.ts,services/**/*producer*.ts,services/**/*consumer*.ts,services/**/kafka/**/*.ts,services/**/messaging/**/*.ts,packages/schemas/**/*
+globs: apps/**/*kafka*.ts,apps/**/*producer*.ts,apps/**/*consumer*.ts,apps/**/kafka/**/*.ts,apps/**/messaging/**/*.ts,libs/schemas/**/*
 alwaysApply: false
 ---
 

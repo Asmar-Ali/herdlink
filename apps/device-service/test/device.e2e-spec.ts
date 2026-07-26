@@ -1,3 +1,4 @@
+import { TokenService } from '@herdlink/auth';
 import { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { getDataSourceToken } from '@nestjs/typeorm';
@@ -25,6 +26,20 @@ const payload = <T>(body: { data: T }): T => body.data;
 describe('Device (e2e)', () => {
   let app: INestApplication;
   let dataSource: DataSource;
+  let authHeader: string;
+
+  // Mutations are protected by JwtAuthGuard by default (reads are @Public());
+  // sign a real token through the same TokenService the app uses so these
+  // tests exercise the actual auth path, not a bypass.
+  const post = (path: string) =>
+    request(app.getHttpServer()).post(path).set('Authorization', authHeader);
+  const patch = (path: string) =>
+    request(app.getHttpServer()).patch(path).set('Authorization', authHeader);
+  const del = (path: string) =>
+    request(app.getHttpServer())
+      .delete(path)
+      .set('Authorization', authHeader);
+  const get = (path: string) => request(app.getHttpServer()).get(path);
 
   beforeAll(async () => {
     const moduleRef = await Test.createTestingModule({
@@ -36,6 +51,10 @@ describe('Device (e2e)', () => {
     await app.init();
 
     dataSource = moduleRef.get(getDataSourceToken());
+
+    const tokenService = moduleRef.get(TokenService);
+    const token = await tokenService.signUser('user:e2e-test', ['operator']);
+    authHeader = `Bearer ${token}`;
   });
 
   afterEach(async () => {
@@ -51,8 +70,7 @@ describe('Device (e2e)', () => {
 
   describe('cross-cutting concerns', () => {
     it('wraps success responses in { data, meta } and echoes correlation id', async () => {
-      const res = await request(app.getHttpServer())
-        .get(BASE)
+      const res = await get(BASE)
         .set(CORRELATION_ID_HEADER, 'cid-fixed-001')
         .expect(200);
 
@@ -63,13 +81,12 @@ describe('Device (e2e)', () => {
     });
 
     it('generates a correlation id when the caller omits one', async () => {
-      const res = await request(app.getHttpServer()).get(BASE).expect(200);
+      const res = await get(BASE).expect(200);
       expect(res.headers[CORRELATION_ID_HEADER]).toMatch(/^[0-9a-f-]{36}$/i);
     });
 
     it('rejects unknown properties with 400 (whitelist)', async () => {
-      const res = await request(app.getHttpServer())
-        .post(BASE)
+      const res = await post(BASE)
         .send({ ...minimalDto('WL'), bogusField: 'nope' })
         .expect(400);
 
@@ -78,11 +95,32 @@ describe('Device (e2e)', () => {
     });
 
     it('rejects invalid uuid params with 400 (ParseUUIDPipe)', async () => {
-      const res = await request(app.getHttpServer())
-        .get(`${BASE}/not-a-uuid`)
-        .expect(400);
+      const res = await get(`${BASE}/not-a-uuid`).expect(400);
 
       expect(res.body.statusCode).toBe(400);
+    });
+  });
+
+  // ─── auth ─────────────────────────────────────────────────────────────────
+
+  describe('authentication', () => {
+    it('200 — GET routes are public and need no token', async () => {
+      await get(BASE).expect(200);
+    });
+
+    it('401 — mutations without a bearer token are rejected', async () => {
+      await request(app.getHttpServer())
+        .post(BASE)
+        .send(minimalDto('NOAUTH'))
+        .expect(401);
+    });
+
+    it('401 — mutations with a token signed by another secret are rejected', async () => {
+      await request(app.getHttpServer())
+        .post(BASE)
+        .set('Authorization', 'Bearer not-a-valid-token')
+        .send(minimalDto('BADAUTH'))
+        .expect(401);
     });
   });
 
@@ -90,10 +128,7 @@ describe('Device (e2e)', () => {
 
   describe('POST /api/v1/device', () => {
     it('201 — creates a device with defaults', async () => {
-      const res = await request(app.getHttpServer())
-        .post(BASE)
-        .send(minimalDto('001'))
-        .expect(201);
+      const res = await post(BASE).send(minimalDto('001')).expect(201);
 
       const body = payload<{
         id: string;
@@ -115,8 +150,7 @@ describe('Device (e2e)', () => {
     });
 
     it('400 — missing required field fails validation', async () => {
-      const res = await request(app.getHttpServer())
-        .post(BASE)
+      const res = await post(BASE)
         .send({ name: 'no serial here' })
         .expect(400);
 
@@ -125,12 +159,9 @@ describe('Device (e2e)', () => {
     });
 
     it('409 — duplicate serialNumber returns Conflict', async () => {
-      await request(app.getHttpServer()).post(BASE).send(minimalDto('DUP'));
+      await post(BASE).send(minimalDto('DUP'));
 
-      const res = await request(app.getHttpServer())
-        .post(BASE)
-        .send(minimalDto('DUP'))
-        .expect(409);
+      const res = await post(BASE).send(minimalDto('DUP')).expect(409);
 
       expect(res.body.statusCode).toBe(409);
       expect(res.body.error).toBe('Conflict');
@@ -145,7 +176,7 @@ describe('Device (e2e)', () => {
 
   describe('GET /api/v1/device', () => {
     it('200 — returns empty paginated result when no devices', async () => {
-      const res = await request(app.getHttpServer()).get(BASE).expect(200);
+      const res = await get(BASE).expect(200);
       expect(payload(res.body)).toEqual({
         items: [],
         pagination: {
@@ -158,10 +189,10 @@ describe('Device (e2e)', () => {
     });
 
     it('200 — returns devices ordered by createdAt DESC', async () => {
-      await request(app.getHttpServer()).post(BASE).send(minimalDto('A'));
-      await request(app.getHttpServer()).post(BASE).send(minimalDto('B'));
+      await post(BASE).send(minimalDto('A'));
+      await post(BASE).send(minimalDto('B'));
 
-      const res = await request(app.getHttpServer()).get(BASE).expect(200);
+      const res = await get(BASE).expect(200);
       const body = payload<{
         items: Array<{ serialNumber: string }>;
         pagination: { total: number };
@@ -175,16 +206,14 @@ describe('Device (e2e)', () => {
     });
 
     it('200 — paginates with page and limit query params', async () => {
-      await request(app.getHttpServer()).post(BASE).send(minimalDto('1'));
-      await request(app.getHttpServer()).post(BASE).send(minimalDto('2'));
-      await request(app.getHttpServer()).post(BASE).send(minimalDto('3'));
+      await post(BASE).send(minimalDto('1'));
+      await post(BASE).send(minimalDto('2'));
+      await post(BASE).send(minimalDto('3'));
 
       const page1 = payload<{
         items: Array<{ serialNumber: string }>;
         pagination: { page: number; limit: number; total: number; totalPages: number };
-      }>(
-        (await request(app.getHttpServer()).get(`${BASE}?page=1&limit=2`)).body,
-      );
+      }>((await get(`${BASE}?page=1&limit=2`)).body);
 
       expect(page1.items).toHaveLength(2);
       expect(page1.pagination).toEqual({
@@ -199,9 +228,7 @@ describe('Device (e2e)', () => {
       const page2 = payload<{
         items: Array<{ serialNumber: string }>;
         pagination: { page: number; totalPages: number };
-      }>(
-        (await request(app.getHttpServer()).get(`${BASE}?page=2&limit=2`)).body,
-      );
+      }>((await get(`${BASE}?page=2&limit=2`)).body);
 
       expect(page2.items).toHaveLength(1);
       expect(page2.pagination.page).toBe(2);
@@ -210,9 +237,7 @@ describe('Device (e2e)', () => {
     });
 
     it('400 — rejects invalid pagination query params', async () => {
-      const res = await request(app.getHttpServer())
-        .get(`${BASE}?page=0&limit=500`)
-        .expect(400);
+      const res = await get(`${BASE}?page=0&limit=500`).expect(400);
 
       expect(res.body.statusCode).toBe(400);
     });
@@ -223,13 +248,10 @@ describe('Device (e2e)', () => {
   describe('GET /api/v1/device/:id', () => {
     it('200 — returns the device by id', async () => {
       const created = payload<{ id: string }>(
-        (await request(app.getHttpServer()).post(BASE).send(minimalDto('002')))
-          .body,
+        (await post(BASE).send(minimalDto('002'))).body,
       );
 
-      const res = await request(app.getHttpServer())
-        .get(`${BASE}/${created.id}`)
-        .expect(200);
+      const res = await get(`${BASE}/${created.id}`).expect(200);
 
       const body = payload<{ id: string; serialNumber: string }>(res.body);
       expect(body.id).toBe(created.id);
@@ -237,9 +259,9 @@ describe('Device (e2e)', () => {
     });
 
     it('404 — unknown id returns Not Found with correct shape', async () => {
-      const res = await request(app.getHttpServer())
-        .get(`${BASE}/00000000-0000-0000-0000-000000000000`)
-        .expect(404);
+      const res = await get(
+        `${BASE}/00000000-0000-0000-0000-000000000000`,
+      ).expect(404);
 
       expect(res.body.statusCode).toBe(404);
       expect(res.body.error).toBe('Not Found');
@@ -252,12 +274,10 @@ describe('Device (e2e)', () => {
   describe('PATCH /api/v1/device/:id', () => {
     it('200 — updates allowed fields', async () => {
       const created = payload<{ id: string }>(
-        (await request(app.getHttpServer()).post(BASE).send(minimalDto('003')))
-          .body,
+        (await post(BASE).send(minimalDto('003'))).body,
       );
 
-      const res = await request(app.getHttpServer())
-        .patch(`${BASE}/${created.id}`)
+      const res = await patch(`${BASE}/${created.id}`)
         .send({ name: 'Renamed Cow', batteryLevel: 87 })
         .expect(200);
 
@@ -272,8 +292,7 @@ describe('Device (e2e)', () => {
     });
 
     it('404 — patching unknown id returns Not Found', async () => {
-      const res = await request(app.getHttpServer())
-        .patch(`${BASE}/00000000-0000-0000-0000-000000000000`)
+      const res = await patch(`${BASE}/00000000-0000-0000-0000-000000000000`)
         .send({ name: 'Ghost' })
         .expect(404);
 
@@ -282,17 +301,15 @@ describe('Device (e2e)', () => {
 
     it('422 — cannot decommission an ACTIVE device directly', async () => {
       const created = payload<{ id: string }>(
-        (await request(app.getHttpServer()).post(BASE).send(minimalDto('004')))
-          .body,
+        (await post(BASE).send(minimalDto('004'))).body,
       );
 
       // make it ACTIVE first
-      await request(app.getHttpServer())
-        .patch(`${BASE}/${created.id}`)
-        .send({ status: DeviceStatus.ACTIVE });
+      await patch(`${BASE}/${created.id}`).send({
+        status: DeviceStatus.ACTIVE,
+      });
 
-      const res = await request(app.getHttpServer())
-        .patch(`${BASE}/${created.id}`)
+      const res = await patch(`${BASE}/${created.id}`)
         .send({ status: DeviceStatus.DECOMMISSIONED })
         .expect(422);
 
@@ -306,41 +323,33 @@ describe('Device (e2e)', () => {
   describe('DELETE /api/v1/device/:id', () => {
     it('200 — deletes an inactive device', async () => {
       const created = payload<{ id: string }>(
-        (await request(app.getHttpServer()).post(BASE).send(minimalDto('005')))
-          .body,
+        (await post(BASE).send(minimalDto('005'))).body,
       );
 
-      await request(app.getHttpServer())
-        .delete(`${BASE}/${created.id}`)
-        .expect(200);
+      await del(`${BASE}/${created.id}`).expect(200);
 
       // confirm it's gone
-      await request(app.getHttpServer())
-        .get(`${BASE}/${created.id}`)
-        .expect(404);
+      await get(`${BASE}/${created.id}`).expect(404);
     });
 
     it('404 — deleting unknown id returns Not Found', async () => {
-      const res = await request(app.getHttpServer())
-        .delete(`${BASE}/00000000-0000-0000-0000-000000000000`)
-        .expect(404);
+      const res = await del(
+        `${BASE}/00000000-0000-0000-0000-000000000000`,
+      ).expect(404);
 
       expect(res.body.statusCode).toBe(404);
     });
 
     it('422 — cannot delete an ACTIVE device', async () => {
       const created = payload<{ id: string }>(
-        (await request(app.getHttpServer()).post(BASE).send(minimalDto('006')))
-          .body,
+        (await post(BASE).send(minimalDto('006'))).body,
       );
 
-      await request(app.getHttpServer())
-        .patch(`${BASE}/${created.id}`)
-        .send({ status: DeviceStatus.ACTIVE });
+      await patch(`${BASE}/${created.id}`).send({
+        status: DeviceStatus.ACTIVE,
+      });
 
-      const res = await request(app.getHttpServer())
-        .delete(`${BASE}/${created.id}`)
-        .expect(422);
+      const res = await del(`${BASE}/${created.id}`).expect(422);
 
       expect(res.body.statusCode).toBe(422);
       expect(res.body.message).toContain('Decommission it first');

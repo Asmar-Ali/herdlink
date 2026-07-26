@@ -1,0 +1,16 @@
+import { chromium } from '@playwright/test';
+const OUT = '/private/tmp/claude-501/-Users-asmarali-herdlink/9fdbcef5-7283-49ce-8a3b-82bca20ddfb2/scratchpad';
+const BASE = 'http://localhost:5173';
+const browser = await chromium.launch();
+const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+const page = await ctx.newPage();
+await page.emulateMedia({ colorScheme: 'light' });
+await page.goto(`${BASE}/login`, { waitUntil: 'networkidle' });
+await page.getByLabel(/email/i).fill('rancher@herdlink.io');
+await page.getByLabel(/password/i).fill('longenoughpassword');
+await page.getByRole('button', { name: /sign in/i }).click();
+await page.waitForURL(`${BASE}/`);
+await page.waitForTimeout(1500);
+await page.screenshot({ path: `${OUT}/09-dashboard-fixed.png`, fullPage: true });
+console.log('shot 09');
+await browser.close();

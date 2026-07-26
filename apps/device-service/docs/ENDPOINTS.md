@@ -4,7 +4,9 @@
 > Every successful response is wrapped: `{ data: <payload>, meta: { timestamp, correlationId } }`.
 > List endpoints return `PaginatedResult` inside `data`: `{ items: [...], pagination: { page, limit, total, totalPages } }`.
 > Errors are shaped by the global `HttpExceptionFilter` (not the envelope).
-> Auth: none (simple JWT planned for M3+).
+> Auth: reads are public. All `POST`, `PATCH`, and `DELETE` routes require
+> `Authorization: Bearer <JWT>` with issuer `herdlink`; missing or invalid
+> tokens return `401`.
 
 ---
 
@@ -29,7 +31,7 @@ Register a new device (collar).
 | `metadata` | `object` | no | free-form JSON |
 
 **Success:** `201` → `data: Device`
-**Errors:** `400` validation · `409` `serialNumber` conflict
+**Errors:** `400` validation · `401` missing/invalid JWT · `409` `serialNumber` conflict
 
 ---
 
@@ -59,7 +61,7 @@ Partial update.
 **Body:** `UpdateDeviceDto` — all `CreateDeviceDto` fields, all optional (`PartialType`)
 
 **Success:** `200` → `data: Device`
-**Errors:** `400` validation · `404` not found · `409` `serialNumber` conflict
+**Errors:** `400` validation · `401` missing/invalid JWT · `404` not found · `409` `serialNumber` conflict
 
 ---
 
@@ -69,7 +71,7 @@ Hard-delete a device.
 **Path:** `id` — UUID
 
 **Success:** `200` → `data: null`
-**Errors:** `400` invalid UUID · `404` not found
+**Errors:** `400` invalid UUID · `401` missing/invalid JWT · `404` not found
 
 ---
 
@@ -95,7 +97,7 @@ Create a new geofence.
 | `createdBy` | `string` | no | max 128 chars |
 
 **Success:** `201` → `data: FenceResponse`
-**Errors:** `400` validation (incl. invalid GeoJSON shape)
+**Errors:** `400` validation (incl. invalid GeoJSON shape) · `401` missing/invalid JWT
 
 ---
 
@@ -125,7 +127,7 @@ Partial update.
 **Body:** `UpdateFenceDto` — all `CreateFenceDto` fields optional, plus optional `updatedBy: string`
 
 **Success:** `200` → `data: FenceResponse`
-**Errors:** `400` validation · `404` not found
+**Errors:** `400` validation · `401` missing/invalid JWT · `404` not found
 
 ---
 
@@ -135,7 +137,7 @@ Hard-delete a fence.
 **Path:** `id` — MongoDB ObjectId
 
 **Success:** `200` → `data: null`
-**Errors:** `400` invalid ObjectId · `404` not found
+**Errors:** `400` invalid ObjectId · `401` missing/invalid JWT · `404` not found
 
 ---
 

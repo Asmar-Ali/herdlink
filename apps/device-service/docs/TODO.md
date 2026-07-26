@@ -19,13 +19,13 @@
 - [x] Device seed service + fence seed data
 - [x] Unit tests — controller, service, repository (devices + fences)
 - [x] E2E tests — device flows + fence flows
+- [x] JWT auth on write endpoints via shared `@herdlink/auth`; reads remain public
 
 ---
 
 ## Remaining ⬜
 
 ### M3 — Production patterns
-- [ ] Simple JWT auth on write endpoints (create/update/delete) — aligns with `realtime-gateway` JWT work
 - [ ] `PATCH /api/v1/device/:id` called by `ingestion-service` to update `lastLatitude`, `lastLongitude`, `lastSeenAt`, `batteryLevel` — define the internal contract first (sync call vs event)
 
 ### M4 — Observability & polish

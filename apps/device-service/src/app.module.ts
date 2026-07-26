@@ -1,3 +1,4 @@
+import { AuthModule } from '@herdlink/auth';
 import {
   CorrelationIdMiddleware,
   ObservabilityModule,
@@ -15,7 +16,17 @@ import { FenceModule } from './fence/fence.module.js';
 @Module({
   imports: [
     ObservabilityModule.forRoot({ serviceName: 'device-service' }),
+    // Must precede AuthModule: ConfigModule.forRoot loads .env into
+    // process.env synchronously, and validateEnv guarantees JWT_SECRET
+    // is present before AuthModule resolves it below.
     ConfigModule.forRoot({ isGlobal: true, validate: validateEnv }),
+    AuthModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => ({
+        secret: config.getOrThrow<string>('JWT_SECRET'),
+      }),
+    }),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],

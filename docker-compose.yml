@@ -277,6 +277,9 @@ services:
       POSTGRES_DB: herdlink
       SEED_DEVICES: "true"
       SEED_DEVICE_COUNT: "1000"
+      # Dev-only shared secret. Every service that verifies or issues JWTs
+      # uses this same value — see docs/adr for the shared-secret rationale.
+      JWT_SECRET: herdlink_dev_jwt_secret_change_me
     depends_on:
       mongodb:
         condition: service_healthy

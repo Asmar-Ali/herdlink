@@ -1,0 +1,149 @@
+@import 'tailwindcss';
+
+/*
+ * HerdLink design tokens.
+ * Brand accent (purple) drives UI chrome — buttons, active nav, focus rings.
+ * Chart series use the validated data-viz palette (see --series-* below), which
+ * is intentionally independent of the brand accent so marks stay colorblind-safe.
+ */
+:root {
+  /* text */
+  --text: #6b6375;
+  --text-h: #08060d;
+  --text-muted: #898781;
+
+  /* surfaces */
+  --bg: #f9f9f7; /* page plane */
+  --surface: #ffffff; /* cards, panels */
+  --surface-2: #f4f3ec; /* subtle fills, table headers */
+  --sidebar-bg: #ffffff;
+  --border: #e5e4e7;
+  --border-strong: #d7d6d9;
+
+  /* brand accent */
+  --accent: #aa3bff;
+  --accent-hover: #9422f0;
+  --accent-fg: #ffffff;
+  --accent-bg: rgba(170, 59, 255, 0.1);
+  --accent-border: rgba(170, 59, 255, 0.5);
+
+  --code-bg: #f4f3ec;
+  --shadow:
+    rgba(0, 0, 0, 0.1) 0 10px 15px -3px, rgba(0, 0, 0, 0.05) 0 4px 6px -2px;
+  --shadow-sm: rgba(0, 0, 0, 0.06) 0 1px 2px 0, rgba(0, 0, 0, 0.04) 0 1px 3px 0;
+
+  /* status palette (fixed — never themed) */
+  --status-good: #0ca30c;
+  --status-warning: #fab219;
+  --status-serious: #ec835a;
+  --status-critical: #d03b3b;
+  --status-neutral: #898781;
+
+  /* chart chrome */
+  --chart-surface: #fcfcfb;
+  --chart-grid: #e1e0d9;
+  --chart-axis: #c3c2b7;
+  --chart-ink: #52514e;
+
+  /* validated categorical palette — light steps */
+  --series-1: #2a78d6; /* blue */
+  --series-2: #eb6834; /* orange */
+  --series-3: #1baf7a; /* aqua */
+  --series-4: #eda100; /* yellow */
+  --series-5: #e87ba4; /* magenta */
+  --series-6: #008300; /* green */
+  --series-7: #4a3aa7; /* violet */
+  --series-8: #e34948; /* red */
+
+  --sans: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --heading: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --mono: ui-monospace, Consolas, monospace;
+
+  color-scheme: light dark;
+  color: var(--text);
+  background: var(--bg);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --text: #9ca3af;
+    --text-h: #f3f4f6;
+    --text-muted: #898781;
+
+    --bg: #0d0d0d;
+    --surface: #16171d;
+    --surface-2: #1f2028;
+    --sidebar-bg: #131319;
+    --border: #2e303a;
+    --border-strong: #3a3c47;
+
+    --accent: #c084fc;
+    --accent-hover: #d0a0ff;
+    --accent-fg: #16171d;
+    --accent-bg: rgba(192, 132, 252, 0.15);
+    --accent-border: rgba(192, 132, 252, 0.5);
+
+    --code-bg: #1f2028;
+    --shadow:
+      rgba(0, 0, 0, 0.4) 0 10px 15px -3px, rgba(0, 0, 0, 0.25) 0 4px 6px -2px;
+    --shadow-sm: rgba(0, 0, 0, 0.3) 0 1px 2px 0, rgba(0, 0, 0, 0.2) 0 1px 3px 0;
+
+    --chart-surface: #1a1a19;
+    --chart-grid: #2c2c2a;
+    --chart-axis: #383835;
+    --chart-ink: #c3c2b7;
+
+    /* validated categorical palette — dark steps */
+    --series-1: #3987e5;
+    --series-2: #d95926;
+    --series-3: #199e70;
+    --series-4: #c98500;
+    --series-5: #d55181;
+    --series-6: #008300;
+    --series-7: #9085e9;
+    --series-8: #e66767;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  padding: 0;
+  min-height: 100svh;
+}
+
+body {
+  font: 15px/1.5 var(--sans);
+  letter-spacing: 0.1px;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--heading);
+  color: var(--text-h);
+  margin: 0;
+}
+
+code {
+  font-family: var(--mono);
+  font-size: 0.85em;
+  border-radius: 4px;
+  padding: 2px 6px;
+  background: var(--code-bg);
+  color: var(--text-h);
+}
+
+/* Recharts inherits page font; keep tooltip/axis crisp */
+.recharts-cartesian-axis-tick-value {
+  font-size: 12px;
+}

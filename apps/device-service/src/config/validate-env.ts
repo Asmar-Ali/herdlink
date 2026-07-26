@@ -4,6 +4,7 @@ const REQUIRED_STRING = [
   'POSTGRES_PASSWORD',
   'POSTGRES_DB',
   'MONGODB_URI',
+  'JWT_SECRET',
 ] as const;
 
 export function validateEnv(

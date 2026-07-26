@@ -2,7 +2,7 @@
 
 > Status: Living document. This is the canonical reference for *what* HerdLink is and *why*.
 > Source material: [`HerdLink_Project_Plan.pdf`](../HerdLink_Project_Plan.pdf) (the original blueprint) and [`README.md`](../README.md) (the public pitch). When they disagree, this PRD wins — update it deliberately.
-> Companion docs: build status in [ROADMAP.md](./ROADMAP.md), the process in [DEVELOPMENT_LIFECYCLE.md](./DEVELOPMENT_LIFECYCLE.md), decisions in [adr/](./adr/).
+> Companion docs: build status in [ROADMAP.md](./ROADMAP.md), the process in [DEVELOPMENT_LIFECYCLE.md](./DEVELOPMENT_LIFECYCLE.md), decisions in [adr/](./adr/), full tech-stack rationale in [TECH_STACK.md](./TECH_STACK.md).
 
 ---
 

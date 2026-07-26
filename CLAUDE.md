@@ -9,7 +9,7 @@ Real-time IoT telemetry & geofencing platform for connected livestock fleets —
 ## Repo map
 
 ```
-apps/            # the 9 services (NestJS). Built: device-service. Rest: not started.
+apps/            # the 9 services (mostly NestJS; dashboard-ui is React+Vite). Built: device-service. In progress: dashboard-ui (scaffolded). Rest: not started.
 libs/            # shared: kafka-client, observability, contracts (not started)
 docs/            # PRD, ROADMAP, lifecycle, ADRs, per-service-spec templates
 .cursor/rules/   # engineering standards — THE SINGLE SOURCE OF TRUTH (see below)
@@ -36,9 +36,9 @@ To change a standard, edit the `.mdc` — do not duplicate rules elsewhere.
 
 ## Established conventions (copy from `device-service`)
 
-`device-service` is the **reference implementation**. New services mirror its structure and these conventions:
+`device-service` is the **reference implementation**. New NestJS services mirror its structure and these conventions:
 
-- **ESM with explicit `.js` import specifiers** (e.g., `import { X } from './x.js'`) — required, this is an ESM project.
+- **ESM with explicit `.js` import specifiers** (e.g., `import { X } from './x.js'`) — required for Node-executed (NestJS) services; `dashboard-ui` is Vite-bundled and uses Vite's own bundler resolution instead (see [ADR-0001](./docs/adr/0001-dashboard-ui-vite-module-resolution.md)).
 - **API shape:** global prefix `api` + URI versioning → all routes are `/api/v1/...` (`bootstrap.ts`). Controllers use `@Controller({ path, version: '1' })`.
 - **Response envelope:** every successful REST response is wrapped `{ data, meta: { timestamp, correlationId } }` by `ResponseInterceptor`. List endpoints put a `PaginatedResult` (`{ items, pagination }`) inside `data` via `buildPaginatedResult`.
 - **Pagination:** `PaginationQueryDto` + `buildPaginatedResult` in `src/common/pagination/`.

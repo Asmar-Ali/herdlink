@@ -10,11 +10,13 @@
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "import": "./dist/index.js"
+      "import": "./dist/index.js",
+      "require": "./dist/index.js"
     },
     "./instrumentation": {
       "types": "./dist/instrumentation.d.ts",
-      "import": "./dist/instrumentation.js"
+      "import": "./dist/instrumentation.js",
+      "require": "./dist/instrumentation.js"
     }
   },
   "files": [

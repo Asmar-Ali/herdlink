@@ -5,6 +5,7 @@ node_modules/
 **/node_modules/
 build/
 **/build/
+*.tsbuildinfo
 
 # Logs
 logs
@@ -48,6 +49,9 @@ lerna-debug.log*
 # temp directory
 .temp
 .tmp
+
+# Claude Code local settings (personal overrides)
+.claude/settings.local.json
 
 # Runtime data
 pids

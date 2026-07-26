@@ -1,3 +1,4 @@
+import { Public } from '@herdlink/auth';
 import {
   Body,
   Controller,
@@ -23,11 +24,13 @@ export class FenceController {
     return this.fenceService.create(createFenceDto);
   }
 
+  @Public()
   @Get()
   findAll(@Query() query: PaginationQueryDto) {
     return this.fenceService.findAll(query);
   }
 
+  @Public()
   @Get(':id')
   findOne(@Param('id', ParseObjectIdPipe) id: string) {
     return this.fenceService.findOne(id);

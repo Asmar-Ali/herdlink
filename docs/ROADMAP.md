@@ -17,15 +17,16 @@ _Last reconciled: 2026-06-21_
 | 3 | `ingestion-service` | M1 | ⬜ Not started | — | |
 | 4 | `geofence-engine` | M2 | ⬜ Not started | — | |
 | 5 | `alerting-service` | M3 | ⬜ Not started | — | |
-| 6 | `device-service` | M2 | ✅ Built | [docs](../apps/device-service/docs/) | REST CRUD for devices + fences; specs scaffolded, to be filled |
+| 6 | `device-service` | M2 | ✅ Built | [docs](../apps/device-service/docs/) | REST CRUD for devices + fences; JWT-protected writes and public reads |
 | 7 | `realtime-gateway` | M1 → M3 | ⬜ Not started | — | WebSocket fan-out; JWT in M3 |
 | 8 | `dashboard-api` | M3 | ⬜ Not started | — | GraphQL BFF |
-| 9 | `dashboard-ui` | M1 → M3 | ⬜ Not started | — | React + MapLibre |
+| 9 | `dashboard-ui` | M1 → M3 | 🚧 In progress | [docs](../apps/dashboard-ui/docs/) | Vite + React 19 + TS scaffolded; routing (react-router) + Tailwind + login page UI added (stubbed, no backend wiring yet); no map/data wiring yet |
 
 ## Shared libraries (`libs/`)
 
 | Library | Status | Notes |
 |---|---|---|
+| `auth` | ✅ Built | Shared JWT verification and issuance — [`libs/auth/`](../libs/auth/) |
 | `kafka-client` | ⬜ Not started | Kafka utilities + schema registry |
 | `observability` | ✅ Built | Pino + OpenTelemetry setup — [`libs/observability/`](../libs/observability/) |
 | `contracts` | ⬜ Not started | Shared types + Avro schemas |

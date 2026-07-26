@@ -76,6 +76,7 @@ None currently. `geofence-engine` will call this service; this service does not 
 | `POSTGRES_PASSWORD` | Postgres password |
 | `POSTGRES_DB` | Postgres database name |
 | `MONGODB_URI` | Full MongoDB connection URI |
+| `JWT_SECRET` | Shared secret used to sign and verify HS256 bearer tokens |
 | `PORT` | HTTP listen port (default `3000`) |
 | `NODE_ENV` | `development` \| `production` (controls TypeORM `synchronize` and SQL logging) |
 

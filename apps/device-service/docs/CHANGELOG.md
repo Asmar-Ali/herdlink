@@ -5,7 +5,16 @@
 
 ## [Unreleased]
 
-_No pending changes._
+### Added
+
+- Shared `@herdlink/auth` integration with global JWT verification, user/service
+  token issuance, and `JWT_SECRET` startup validation.
+- Authentication E2E coverage for missing, malformed, and valid bearer tokens.
+
+### Changed
+
+- **BREAKING:** Device and fence `POST`, `PATCH`, and `DELETE` routes now require
+  a valid bearer JWT. `GET` routes remain public.
 
 ---
 

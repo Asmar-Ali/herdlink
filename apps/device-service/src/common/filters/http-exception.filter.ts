@@ -9,6 +9,8 @@ import {
 import { Request, Response } from 'express';
 import { RequestContext } from '@herdlink/observability';
 
+type RequestWithCorrelationId = Request & { correlationId?: string };
+
 export interface ErrorResponse {
   statusCode: number;
   error: string;
@@ -25,7 +27,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
   catch(exception: unknown, host: ArgumentsHost): void {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse<Response>();
-    const request = ctx.getRequest<Request>();
+    const request = ctx.getRequest<RequestWithCorrelationId>();
 
     const statusCode =
       exception instanceof HttpException

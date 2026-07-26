@@ -20,6 +20,7 @@
     "test:e2e": "jest --config ./test/jest-e2e.json --runInBand --forceExit"
   },
   "dependencies": {
+    "@herdlink/auth": "file:../../libs/auth",
     "@herdlink/observability": "file:../../libs/observability",
     "@nestjs/common": "^11.0.1",
     "@nestjs/config": "^4.0.4",
@@ -70,9 +71,20 @@
     "rootDir": "src",
     "testRegex": ".*\\.spec\\.ts$",
     "transform": {
-      "^.+\\.(t|j)s$": "ts-jest"
+      "^.+\\.(t|j)s$": [
+        "ts-jest",
+        {
+          "tsconfig": {
+            "module": "CommonJS",
+            "moduleResolution": "Node",
+            "resolvePackageJsonExports": false
+          }
+        }
+      ]
     },
     "moduleNameMapper": {
+      "^@herdlink/auth$": "<rootDir>/../../../libs/auth/src/index.ts",
+      "^@herdlink/observability$": "<rootDir>/../../../libs/observability/src/index.ts",
       "^(\\.{1,2}/.*)\\.js$": "$1"
     },
     "collectCoverageFrom": [

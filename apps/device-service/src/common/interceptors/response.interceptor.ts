@@ -9,6 +9,8 @@ import type { Request } from 'express';
 import type { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 
+type RequestWithCorrelationId = Request & { correlationId?: string };
+
 export interface ResponseEnvelope<T> {
   data: T;
   meta: {
@@ -35,7 +37,7 @@ export class ResponseInterceptor<T> implements NestInterceptor<
       return next.handle();
     }
 
-    const req = ctx.switchToHttp().getRequest<Request>();
+    const req = ctx.switchToHttp().getRequest<RequestWithCorrelationId>();
 
     return next.handle().pipe(
       map((data) => {

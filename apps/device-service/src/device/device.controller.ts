@@ -1,3 +1,4 @@
+import { Public } from '@herdlink/auth';
 import {
   Body,
   Controller,
@@ -23,11 +24,13 @@ export class DeviceController {
     return this.deviceService.create(createDeviceDto);
   }
 
+  @Public()
   @Get()
   findAll(@Query() query: PaginationQueryDto) {
     return this.deviceService.findAll(query);
   }
 
+  @Public()
   @Get(':id')
   findOne(@Param('id', ParseUUIDPipe) id: string) {
     return this.deviceService.findOne(id);

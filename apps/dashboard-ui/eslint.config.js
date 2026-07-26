@@ -31,4 +31,13 @@ export default tseslint.config(
       globals: globals.node,
     },
   },
+  {
+    // Generated shadcn/ui primitives — they export cva variants alongside the
+    // component, which is fine for a design-system module.
+    files: ['src/components/ui/**/*.{ts,tsx}'],
+    rules: {
+      'react-refresh/only-export-components': 'off',
+      'react-x/no-context-provider': 'off',
+    },
+  },
 );

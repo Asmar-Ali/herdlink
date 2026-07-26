@@ -4,7 +4,18 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>dashboard-ui</title>
+    <title>HerdLink · Fleet back-office</title>
+    <script>
+      // Keep the shadcn `.dark` class in sync with the OS theme before paint
+      // (no flash). A future in-app theme toggle can override this class.
+      try {
+        if (matchMedia('(prefers-color-scheme: dark)').matches) {
+          document.documentElement.classList.add('dark');
+        }
+      } catch (e) {
+        /* no-op */
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>

@@ -11,6 +11,26 @@ import { RequestContext } from '@herdlink/observability';
 
 type RequestWithCorrelationId = Request & { correlationId?: string };
 
+/**
+ * True for HttpException instances — including ones thrown from a *different*
+ * copy of `@nestjs/common`. `@herdlink/auth` carries its own nested
+ * node_modules, so the `UnauthorizedException` Passport throws is a different
+ * class identity than this service's `HttpException` and fails a plain
+ * `instanceof`, which previously masked genuine 401/403s as 500s. Duck-typing
+ * on `getStatus`/`getResponse` recovers the real status. (Same root cause the
+ * JwtAuthGuard works around for the Reflector; the durable fix is to hoist
+ * `@nestjs/*` to a single copy via peerDependencies in `@herdlink/auth`.)
+ */
+function isHttpExceptionLike(err: unknown): err is HttpException {
+  return (
+    err instanceof HttpException ||
+    (typeof err === 'object' &&
+      err !== null &&
+      typeof (err as HttpException).getStatus === 'function' &&
+      typeof (err as HttpException).getResponse === 'function')
+  );
+}
+
 export interface ErrorResponse {
   statusCode: number;
   error: string;
@@ -29,13 +49,13 @@ export class HttpExceptionFilter implements ExceptionFilter {
     const response = ctx.getResponse<Response>();
     const request = ctx.getRequest<RequestWithCorrelationId>();
 
-    const statusCode =
-      exception instanceof HttpException
-        ? exception.getStatus()
-        : HttpStatus.INTERNAL_SERVER_ERROR;
+    const isHttpException = isHttpExceptionLike(exception);
 
-    const rawResponse =
-      exception instanceof HttpException ? exception.getResponse() : null;
+    const statusCode = isHttpException
+      ? exception.getStatus()
+      : HttpStatus.INTERNAL_SERVER_ERROR;
+
+    const rawResponse = isHttpException ? exception.getResponse() : null;
 
     const message: string | string[] =
       rawResponse !== null

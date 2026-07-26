@@ -1,4 +1,4 @@
-import { seedDevices, seedFences } from './fixtures.ts';
+import { http, toQuery } from './http.ts';
 import {
   DeviceStatus,
   type CreateDeviceInput,
@@ -6,6 +6,7 @@ import {
   type DashboardStats,
   type Device,
   type Fence,
+  type GeoJSONPolygon,
   type PaginatedResult,
   type PaginationQuery,
   type TimeseriesPoint,
@@ -17,157 +18,88 @@ import {
  * ─────────────────────────────────────────────────────────────────────────────
  * THE SWAP POINT.
  *
- * This module is an in-memory fake of the (not-yet-built) dashboard-api. Every
- * function here returns a Promise and simulates latency, so React Query wiring,
- * loading states, optimistic updates and error handling are all exercised for
- * real. When dashboard-api ships, replace the bodies below with `fetch(...)`
- * calls to `/api/v1/...` — the signatures and return types stay identical, so no
- * component or hook needs to change.
+ * Devices and fences are both wired to the real device-service REST API
+ * (`/api/v1/device`, `/api/v1/fence`) via the `http` helper — list/create/
+ * update/delete round-trip to Postgres/Mongo and mutations carry the operator's
+ * JWT. Only the dashboard trend lines remain synthetic (no stats endpoint yet);
+ * its totals are derived from the live device and fence lists so the tiles never
+ * disagree with the tables. Each function keeps the same signature and return
+ * type, so no component or hook changed when the swap happened.
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
-const LATENCY_MS = 350;
-
-// Module-level mutable stores so create/update/delete persist across a session.
-let devices: Device[] = seedDevices();
-let fences: Fence[] = seedFences();
-
-function delay<T>(value: T, ms = LATENCY_MS): Promise<T> {
-  return new Promise((resolve) => setTimeout(() => resolve(value), ms));
-}
-
-function paginate<T>(
-  items: T[],
-  { page = 1, limit = 20 }: PaginationQuery,
-): PaginatedResult<T> {
-  const total = items.length;
-  const start = (page - 1) * limit;
-  return {
-    items: items.slice(start, start + limit),
-    pagination: {
-      page,
-      limit,
-      total,
-      totalPages: total === 0 ? 0 : Math.ceil(total / limit),
-    },
-  };
-}
-
-function nowIso(): string {
-  return new Date().toISOString();
-}
-
-/* ── Devices ──────────────────────────────────────────────────────────────── */
+/* ── Devices (live — device-service `/api/v1/device`) ───────────────────────── */
 
 export function listDevices(
   query: PaginationQuery = {},
 ): Promise<PaginatedResult<Device>> {
-  const sorted = [...devices].sort((a, b) =>
-    b.updatedAt.localeCompare(a.updatedAt),
+  // device-service orders the page by `updatedAt DESC`, so no client re-sort.
+  return http.get<PaginatedResult<Device>>(
+    `/device${toQuery({ page: query.page, limit: query.limit })}`,
   );
-  return delay(paginate(sorted, query));
 }
 
 export function createDevice(input: CreateDeviceInput): Promise<Device> {
-  const device: Device = {
-    id: `dev-${crypto.randomUUID().slice(0, 8)}`,
-    serialNumber: input.serialNumber,
-    name: input.name,
-    type: input.type ?? 'COLLAR_V1',
-    status: input.status ?? DeviceStatus.INACTIVE,
-    herdId: input.herdId ?? null,
-    lastLatitude: null,
-    lastLongitude: null,
-    lastSeenAt: null,
-    batteryLevel: input.batteryLevel ?? null,
-    metadata: {},
-    createdAt: nowIso(),
-    updatedAt: nowIso(),
-  };
-  devices = [device, ...devices];
-  return delay(device);
+  return http.post<Device>('/device', input);
 }
 
 export function updateDevice(
   id: string,
   input: UpdateDeviceInput,
 ): Promise<Device> {
-  let updated: Device | undefined;
-  devices = devices.map((d) => {
-    if (d.id !== id) return d;
-    updated = { ...d, ...input, updatedAt: nowIso() };
-    return updated;
-  });
-  if (!updated) return Promise.reject(new Error('Device not found'));
-  return delay(updated);
+  return http.patch<Device>(`/device/${id}`, input);
 }
 
 export function deleteDevice(id: string): Promise<void> {
-  devices = devices.filter((d) => d.id !== id);
-  return delay(undefined);
+  return http.delete(`/device/${id}`);
 }
 
-/* ── Fences ───────────────────────────────────────────────────────────────── */
+/* ── Fences (live — device-service `/api/v1/fence`) ─────────────────────────── */
+
+// device-service's CreateFenceDto requires a valid closed GeoJSON polygon, but
+// the shape is drawn on the (not-yet-built) fences map, not typed in the form.
+// Until that editor lands, new fences get this placeholder ring near the demo
+// ranch; operators redraw the real boundary later. Keeping it here (not in the
+// form) means the form and types stay geometry-free until the map view needs it.
+const PLACEHOLDER_GEOMETRY: GeoJSONPolygon = {
+  type: 'Polygon',
+  coordinates: [
+    [
+      [-5.1, 56.82],
+      [-5.09, 56.82],
+      [-5.09, 56.83],
+      [-5.1, 56.83],
+      [-5.1, 56.82],
+    ],
+  ],
+};
 
 export function listFences(
   query: PaginationQuery = {},
 ): Promise<PaginatedResult<Fence>> {
-  const sorted = [...fences].sort((a, b) =>
-    b.updatedAt.localeCompare(a.updatedAt),
+  // device-service orders the page by `createdAt DESC`; the page filters and
+  // paginates client-side, so no re-sort here.
+  return http.get<PaginatedResult<Fence>>(
+    `/fence${toQuery({ page: query.page, limit: query.limit })}`,
   );
-  return delay(paginate(sorted, query));
 }
 
 export function createFence(input: CreateFenceInput): Promise<Fence> {
-  const fence: Fence = {
-    id: `fence-${crypto.randomUUID().slice(0, 8)}`,
-    name: input.name,
-    description: input.description,
-    type: input.type,
-    breachDirection: input.breachDirection ?? 'BOTH',
-    // A placeholder polygon; the real map-draw editor lands with the fences map view.
-    geometry: {
-      type: 'Polygon',
-      coordinates: [
-        [
-          [-5.1, 56.82],
-          [-5.09, 56.82],
-          [-5.09, 56.83],
-          [-5.1, 56.83],
-          [-5.1, 56.82],
-        ],
-      ],
-    },
-    active: input.active ?? true,
-    herdIds: input.herdIds ?? [],
-    alertCooldownSeconds: input.alertCooldownSeconds ?? 300,
-    severity: input.severity ?? 'MEDIUM',
-    metadata: {},
-    createdBy: 'rancher@herdlink.io',
-    createdAt: nowIso(),
-    updatedAt: nowIso(),
-  };
-  fences = [fence, ...fences];
-  return delay(fence);
+  return http.post<Fence>('/fence', {
+    ...input,
+    geometry: PLACEHOLDER_GEOMETRY,
+  });
 }
 
 export function updateFence(
   id: string,
   input: UpdateFenceInput,
 ): Promise<Fence> {
-  let updated: Fence | undefined;
-  fences = fences.map((f) => {
-    if (f.id !== id) return f;
-    updated = { ...f, ...input, updatedAt: nowIso() };
-    return updated;
-  });
-  if (!updated) return Promise.reject(new Error('Fence not found'));
-  return delay(updated);
+  return http.patch<Fence>(`/fence/${id}`, input);
 }
 
 export function deleteFence(id: string): Promise<void> {
-  fences = fences.filter((f) => f.id !== id);
-  return delay(undefined);
+  return http.delete(`/fence/${id}`);
 }
 
 /* ── Dashboard aggregates ─────────────────────────────────────────────────── */
@@ -192,7 +124,17 @@ function seededTrend(
   return points;
 }
 
-export function getDashboardStats(): Promise<DashboardStats> {
+export async function getDashboardStats(): Promise<DashboardStats> {
+  // Derive device and fence figures from the live lists so the dashboard tiles
+  // and the tables never disagree. Only the trend lines stay synthetic until a
+  // dedicated stats endpoint replaces this whole function.
+  const [devicePage, fencePage] = await Promise.all([
+    listDevices({ limit: 100 }),
+    listFences({ limit: 100 }),
+  ]);
+  const devices = devicePage.items;
+  const fences = fencePage.items;
+
   const active = devices.filter((d) => d.status === DeviceStatus.ACTIVE);
   const lost = devices.filter((d) => d.status === DeviceStatus.LOST);
   const batteries = devices
@@ -212,11 +154,11 @@ export function getDashboardStats(): Promise<DashboardStats> {
   const activeFences = fences.filter((f) => f.active).length;
 
   const stats: DashboardStats = {
-    totalDevices: devices.length,
+    totalDevices: devicePage.pagination.total,
     activeDevices: active.length,
     activeDevicesDelta: 3,
     lostDevices: lost.length,
-    totalFences: fences.length,
+    totalFences: fencePage.pagination.total,
     activeFences,
     avgBatteryLevel: avgBattery,
     lowBatteryDevices: batteries.filter((b) => b < 20).length,
@@ -224,5 +166,5 @@ export function getDashboardStats(): Promise<DashboardStats> {
     activeDevicesTrend: seededTrend(14, active.length, 4),
     breachesTrend: seededTrend(14, 5, 4),
   };
-  return delay(stats);
+  return stats;
 }

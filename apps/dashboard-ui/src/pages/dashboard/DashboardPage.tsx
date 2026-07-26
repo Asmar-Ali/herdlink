@@ -10,7 +10,7 @@ export function DashboardPage() {
   const { data: stats, isLoading } = useDashboardStats();
 
   if (isLoading || !stats) {
-    return <CenteredSpinner label="Loading fleet metrics…" />;
+    return <CenteredSpinner label="Loading Fleet Metrics…" />;
   }
 
   return (
@@ -18,7 +18,7 @@ export function DashboardPage() {
       {/* KPI row */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatTile
-          label="Active devices"
+          label="Active Devices"
           value={stats.activeDevices}
           icon="devices"
           accent="good"
@@ -33,14 +33,14 @@ export function DashboardPage() {
           hint={`${stats.activeFences} active`}
         />
         <StatTile
-          label="Avg. battery"
+          label="Avg. Battery"
           value={`${stats.avgBatteryLevel}%`}
           icon="battery"
           accent={stats.avgBatteryLevel < 30 ? 'warning' : 'accent'}
           hint={`${stats.lowBatteryDevices} below 20%`}
         />
         <StatTile
-          label="Lost devices"
+          label="Lost Devices"
           value={stats.lostDevices}
           icon="signal-off"
           accent={stats.lostDevices > 0 ? 'critical' : 'good'}
@@ -51,7 +51,7 @@ export function DashboardPage() {
       {/* Trend — full width */}
       <Card>
         <CardHeader
-          title="Active devices"
+          title="Active Devices"
           subtitle="Devices reporting telemetry · last 14 days"
         />
         <ActiveDevicesArea data={stats.activeDevicesTrend} />
@@ -61,14 +61,14 @@ export function DashboardPage() {
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <Card>
           <CardHeader
-            title="Fleet status"
+            title="Fleet Status"
             subtitle="Device distribution by state"
           />
           <DeviceStatusDonut data={stats.statusBreakdown} />
         </Card>
         <Card>
           <CardHeader
-            title="Geofence breaches"
+            title="Geofence Breaches"
             subtitle="Boundary crossings · last 14 days"
           />
           <BreachesBar data={stats.breachesTrend} />

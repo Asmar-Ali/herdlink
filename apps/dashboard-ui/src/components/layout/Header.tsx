@@ -14,7 +14,7 @@ export function Header({
       <button
         type="button"
         onClick={onOpenMenu}
-        aria-label="Open navigation"
+        aria-label="Open Navigation"
         className="-ml-1 rounded-lg p-2 text-[var(--text)] hover:bg-[var(--surface-2)] md:hidden"
       >
         <Icon name="menu" />
@@ -34,7 +34,7 @@ export function Header({
           <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[var(--status-good)] opacity-60" />
           <span className="relative inline-flex h-2 w-2 rounded-full bg-[var(--status-good)]" />
         </span>
-        Live telemetry
+        Live Telemetry
       </div>
     </header>
   );

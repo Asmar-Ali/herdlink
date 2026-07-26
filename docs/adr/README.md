@@ -23,5 +23,6 @@ Run `/new-adr <short title>` (copies the template, assigns the next number, link
 |---|---|---|
 | [0000](./0000-adr-template.md) | ADR template | — (template) |
 | [0001](./0001-dashboard-ui-vite-module-resolution.md) | dashboard-ui uses Vite bundler module resolution, not the explicit `.js`-extension ESM convention | Accepted |
+| [0002](./0002-auth-login-in-device-service.md) | Auth login lives in device-service (interim) | Accepted |
 
 <!-- /new-adr appends new rows here. Candidate ADRs from the PRD/README: Kafka over RabbitMQ; polyglot persistence (Timescale/Mongo/Redis); telemetry partition key = device_id; outbox in alerting-service; idempotency strategy; GraphQL alongside REST. -->

@@ -99,7 +99,7 @@ export function DevicesPage() {
                 setSearch(e.target.value);
                 setPage(1);
               }}
-              placeholder="Search name, serial, herd…"
+              placeholder="Search Name, Serial, Herd…"
               className="h-10 w-full rounded-lg border border-[var(--border-strong)] bg-[var(--surface)] pl-9 pr-3 text-sm text-[var(--text-h)] outline-none focus:border-[var(--accent)] focus:ring-2 focus:ring-[var(--accent-border)]"
             />
           </div>
@@ -111,7 +111,7 @@ export function DevicesPage() {
             }}
             className="h-10 rounded-lg border border-[var(--border-strong)] bg-[var(--surface)] px-3 text-sm text-[var(--text-h)] outline-none focus:border-[var(--accent)] focus:ring-2 focus:ring-[var(--accent-border)]"
           >
-            <option value="ALL">All statuses</option>
+            <option value="ALL">All Statuses</option>
             {Object.values(DeviceStatus).map((s) => (
               <option key={s} value={s}>
                 {titleCase(s)}
@@ -121,17 +121,17 @@ export function DevicesPage() {
         </div>
         <Button onClick={openCreate}>
           <Icon name="plus" size={18} />
-          Register device
+          Register Device
         </Button>
       </div>
 
       <Card padded={false}>
         {isLoading ? (
-          <CenteredSpinner label="Loading devices…" />
+          <CenteredSpinner label="Loading Devices…" />
         ) : filtered.length === 0 ? (
           <EmptyState
             icon="devices"
-            title="No devices found"
+            title="No Devices Found"
             description={
               all.length === 0
                 ? 'Register your first collar to start tracking the herd.'
@@ -141,7 +141,7 @@ export function DevicesPage() {
               all.length === 0 ? (
                 <Button onClick={openCreate}>
                   <Icon name="plus" size={18} />
-                  Register device
+                  Register Device
                 </Button>
               ) : undefined
             }
@@ -155,8 +155,8 @@ export function DevicesPage() {
                   <Th>Status</Th>
                   <Th>Herd</Th>
                   <Th>Battery</Th>
-                  <Th>Last position</Th>
-                  <Th>Last seen</Th>
+                  <Th>Last Position</Th>
+                  <Th>Last Seen</Th>
                   <Th className="text-right">Actions</Th>
                 </tr>
               </thead>
@@ -241,7 +241,7 @@ export function DevicesPage() {
         onClose={() => setDeleting(null)}
         onConfirm={confirmDelete}
         loading={deleteDevice.isPending}
-        title="Delete device"
+        title="Delete Device"
         message={`Remove ${deleting?.name ?? 'this device'} (${deleting?.serialNumber ?? ''}) from the fleet? This cannot be undone.`}
       />
     </div>

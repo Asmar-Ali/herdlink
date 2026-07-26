@@ -1,4 +1,4 @@
-import { AuthModule } from '@herdlink/auth';
+import { AuthModule as PlatformAuthModule } from '@herdlink/auth';
 import {
   CorrelationIdMiddleware,
   ObservabilityModule,
@@ -7,6 +7,7 @@ import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { AuthModule } from './auth/auth.module.js';
 import { validateEnv } from './config/validate-env.js';
 import { createMongooseOptions } from './database/mongoose.config.js';
 import { createTypeOrmOptions } from './database/typeorm.config.js';
@@ -20,7 +21,7 @@ import { FenceModule } from './fence/fence.module.js';
     // process.env synchronously, and validateEnv guarantees JWT_SECRET
     // is present before AuthModule resolves it below.
     ConfigModule.forRoot({ isGlobal: true, validate: validateEnv }),
-    AuthModule.forRootAsync({
+    PlatformAuthModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
@@ -37,6 +38,7 @@ import { FenceModule } from './fence/fence.module.js';
       inject: [ConfigService],
       useFactory: (config: ConfigService) => createMongooseOptions(config),
     }),
+    AuthModule,
     DeviceModule,
     FenceModule,
   ],

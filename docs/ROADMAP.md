@@ -6,7 +6,7 @@
 
 **Legend:** ✅ Built · 🚧 In progress · ⬜ Not started
 
-_Last reconciled: 2026-06-21_
+_Last reconciled: 2026-07-26_
 
 ## Services
 
@@ -17,10 +17,10 @@ _Last reconciled: 2026-06-21_
 | 3 | `ingestion-service` | M1 | ⬜ Not started | — | |
 | 4 | `geofence-engine` | M2 | ⬜ Not started | — | |
 | 5 | `alerting-service` | M3 | ⬜ Not started | — | |
-| 6 | `device-service` | M2 | ✅ Built | [docs](../apps/device-service/docs/) | REST CRUD for devices + fences; JWT-protected writes and public reads |
+| 6 | `device-service` | M2 | ✅ Built | [docs](../apps/device-service/docs/) | REST CRUD for devices + fences; JWT-protected writes; demo `POST /api/v1/auth/login` |
 | 7 | `realtime-gateway` | M1 → M3 | ⬜ Not started | — | WebSocket fan-out; JWT in M3 |
 | 8 | `dashboard-api` | M3 | ⬜ Not started | — | GraphQL BFF |
-| 9 | `dashboard-ui` | M1 → M3 | 🚧 In progress | [docs](../apps/dashboard-ui/docs/) | Vite + React 19 + TS scaffolded; routing (react-router) + Tailwind + login page UI added (stubbed, no backend wiring yet); no map/data wiring yet |
+| 9 | `dashboard-ui` | M1 → M3 | 🚧 In progress | [docs](../apps/dashboard-ui/docs/) | Portal shell + devices/fences/login wired to `device-service` REST (Vite proxy); placeholder fence geometry; map + live WS still pending |
 
 ## Shared libraries (`libs/`)
 

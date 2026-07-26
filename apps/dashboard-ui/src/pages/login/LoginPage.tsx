@@ -4,7 +4,11 @@ import { useForm } from 'react-hook-form';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { useAuth } from '../../lib/auth/auth-context.ts';
-import { loginSchema, type LoginFormValues } from './login-schema.ts';
+import {
+  demoCredentials,
+  loginSchema,
+  type LoginFormValues,
+} from './login-schema.ts';
 
 interface LocationState {
   from?: { pathname?: string };
@@ -21,17 +25,24 @@ export function LoginPage() {
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
-  } = useForm<LoginFormValues>({ resolver: zodResolver(loginSchema) });
+  } = useForm<LoginFormValues>({
+    resolver: zodResolver(loginSchema),
+    // No signup flow yet — pre-fill the shared demo account (see login-schema.ts).
+    defaultValues: demoCredentials,
+  });
 
   const onSubmit = async (values: LoginFormValues) => {
     setAuthError(null);
     try {
-      // TODO(M3): swap AuthProvider.login for realtime-gateway's JWT endpoint — see docs/PRD.md#8-milestones.
-      const user = await login(values.email);
+      const user = await login(values.email, values.password);
       toast.success(`Welcome back, ${user.name}`);
       navigate(from, { replace: true });
-    } catch {
-      setAuthError('Unable to sign in. Please try again.');
+    } catch (error) {
+      setAuthError(
+        error instanceof Error
+          ? error.message
+          : 'Unable to sign in. Please try again.',
+      );
     }
   };
 
@@ -40,7 +51,7 @@ export function LoginPage() {
       <div className="w-full max-w-sm space-y-8 rounded-2xl border border-[var(--border)] p-6 shadow-[var(--shadow)] sm:p-8">
         <div className="text-center">
           <h1 className="text-2xl font-semibold tracking-tight text-[var(--text-h)]">
-            Sign in to HerdLink
+            Sign In to HerdLink
           </h1>
           <p className="mt-2 text-sm text-[var(--text)]">
             Monitor your fleet in real time.
@@ -118,13 +129,13 @@ export function LoginPage() {
             disabled={isSubmitting}
             className="flex w-full justify-center rounded-lg bg-[var(--accent)] px-4 py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {isSubmitting ? 'Signing in…' : 'Sign in'}
+            {isSubmitting ? 'Signing In…' : 'Sign In'}
           </button>
         </form>
 
         <p className="text-center text-xs text-[var(--text-muted)]">
-          Demo build — any valid email and an 8+ character password will sign
-          you in.
+          Demo build — the shared operator credentials are pre-filled. Just
+          click “Sign in”.
         </p>
       </div>
     </main>

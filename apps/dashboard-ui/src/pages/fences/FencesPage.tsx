@@ -75,39 +75,44 @@ export function FencesPage() {
                 setSearch(e.target.value);
                 setPage(1);
               }}
-              placeholder="Search fences…"
+              placeholder="Search Fences…"
               className="h-10 w-full rounded-lg border border-[var(--border-strong)] bg-[var(--surface)] pl-9 pr-3 text-sm text-[var(--text-h)] outline-none focus:border-[var(--accent)] focus:ring-2 focus:ring-[var(--accent-border)]"
             />
           </div>
-          <select
-            value={typeFilter}
-            onChange={(e) => {
-              setTypeFilter(e.target.value as GeofenceType | 'ALL');
-              setPage(1);
-            }}
-            className="h-10 rounded-lg border border-[var(--border-strong)] bg-[var(--surface)] px-3 text-sm text-[var(--text-h)] outline-none focus:border-[var(--accent)] focus:ring-2 focus:ring-[var(--accent-border)]"
-          >
-            <option value="ALL">All types</option>
-            {Object.values(GeofenceType).map((t) => (
-              <option key={t} value={t}>
-                {titleCase(t)}
-              </option>
-            ))}
-          </select>
+          <div className="relative">
+            <select
+              value={typeFilter}
+              onChange={(e) => {
+                setTypeFilter(e.target.value as GeofenceType | 'ALL');
+                setPage(1);
+              }}
+              className="h-10 appearance-none rounded-lg border border-[var(--border-strong)] bg-[var(--surface)] py-0 pl-3 pr-9 text-sm text-[var(--text-h)] outline-none focus:border-[var(--accent)] focus:ring-2 focus:ring-[var(--accent-border)]"
+            >
+              <option value="ALL">All Types</option>
+              {Object.values(GeofenceType).map((t) => (
+                <option key={t} value={t}>
+                  {titleCase(t)}
+                </option>
+              ))}
+            </select>
+            <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]">
+              <Icon name="chevron-down" size={16} />
+            </span>
+          </div>
         </div>
         <Button onClick={openCreate}>
           <Icon name="plus" size={18} />
-          Create geofence
+          Create Geofence
         </Button>
       </div>
 
       <Card padded={false}>
         {isLoading ? (
-          <CenteredSpinner label="Loading fences…" />
+          <CenteredSpinner label="Loading Fences…" />
         ) : filtered.length === 0 ? (
           <EmptyState
             icon="fences"
-            title="No geofences found"
+            title="No Geofences Found"
             description={
               all.length === 0
                 ? 'Create your first boundary to start alerting on breaches.'
@@ -117,7 +122,7 @@ export function FencesPage() {
               all.length === 0 ? (
                 <Button onClick={openCreate}>
                   <Icon name="plus" size={18} />
-                  Create geofence
+                  Create Geofence
                 </Button>
               ) : undefined
             }
@@ -131,7 +136,7 @@ export function FencesPage() {
                   <Th>Type</Th>
                   <Th>Severity</Th>
                   <Th>Breach</Th>
-                  <Th>Applies to</Th>
+                  <Th>Applies To</Th>
                   <Th>State</Th>
                   <Th className="text-right">Actions</Th>
                 </tr>
@@ -171,7 +176,7 @@ export function FencesPage() {
                     <Td>
                       <span className="text-sm text-[var(--text)]">
                         {f.herdIds.length === 0
-                          ? 'All devices'
+                          ? 'All Devices'
                           : f.herdIds.join(', ')}
                       </span>
                     </Td>
@@ -227,7 +232,7 @@ export function FencesPage() {
         onClose={() => setDeleting(null)}
         onConfirm={confirmDelete}
         loading={deleteFence.isPending}
-        title="Delete geofence"
+        title="Delete Geofence"
         message={`Delete "${deleting?.name ?? 'this fence'}"? Devices will no longer be alerted on this boundary.`}
       />
     </div>

@@ -2,7 +2,6 @@ import { Suspense, useState } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { CenteredSpinner } from '../ui/Spinner.tsx';
 import { Header } from './Header.tsx';
-import { SettingsMenu } from './SettingsMenu.tsx';
 import { Sidebar } from './Sidebar.tsx';
 
 const TITLES: Record<string, { title: string; subtitle: string }> = {
@@ -44,8 +43,6 @@ export function AppLayout() {
           </Suspense>
         </main>
       </div>
-
-      <SettingsMenu />
     </div>
   );
 }

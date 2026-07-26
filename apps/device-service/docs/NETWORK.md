@@ -64,7 +64,9 @@ Planned future event production (M3+): publish a `device.updated` event when a d
 
 ## Synchronous calls (outbound)
 
-None currently. `geofence-engine` will call this service; this service does not call others.
+None currently. This service does not call others.
+
+**Inbound callers (for orientation):** `dashboard-ui` (login + device/fence CRUD via Vite `/api` proxy); planned: `geofence-engine` (loads fences on startup), `dashboard-api`.
 
 ## Required environment variables
 

@@ -36,6 +36,7 @@ export function formatCoords(lat: number | null, lng: number | null): string {
   return `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
 }
 
+/** Enum/label display: title case (`COLLAR_V1` → `Collar V1`). */
 export function titleCase(value: string): string {
   return value
     .toLowerCase()

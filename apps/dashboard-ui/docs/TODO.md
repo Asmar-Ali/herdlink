@@ -13,15 +13,16 @@
 - [x] Test tooling — Vitest + React Testing Library (unit/component), Playwright (e2e), tests passing
 - [x] Client-side routing (`react-router-dom`) — `/login` + protected group (`/`, `/devices`, `/fences`); authed pages lazy-loaded
 - [x] Tailwind CSS (`@tailwindcss/vite`) wired for styling; app-shell + validated chart palette tokens in `index.css` (light/dark)
-- [x] Login page UI (`src/pages/login/LoginPage.tsx`) — `react-hook-form` + `zod`; now redirects on success via the auth shim
-- [x] **Back-office portal shell** — sidebar + header + fixed bottom-right settings/profile dropdown (`src/components/layout/`)
-- [x] **Auth shim + route guard** — `AuthProvider` (localStorage session) + `ProtectedRoute`; public surface matches the eventual JWT flow
+- [x] Login page UI (`src/pages/login/LoginPage.tsx`) — `react-hook-form` + `zod`; calls `device-service`'s real `POST /api/v1/auth/login` and redirects on success
+- [x] **Back-office portal shell** — sidebar (nav + footer settings/profile) + header (`src/components/layout/`)
+- [x] **Auth + route guard** — `AuthProvider` persists the JWT + operator returned by `device-service`'s login endpoint (`localStorage`); `ProtectedRoute` guards the authed routes
 - [x] **Toasts** — `sonner` mounted at root; success/error on login, logout, and all mutations
-- [x] **Dashboard** — KPI stat tiles + Recharts charts (active-devices trend, status donut, breaches bar)
-- [x] **Devices** — searchable/filterable table + create/edit modal (mirrors `CreateDeviceDto`) + delete confirmation
-- [x] **Fences** — geofence table + create/edit modal (mirrors `CreateFenceDto`, geometry deferred) + delete confirmation
-- [x] **Typed mock data layer** (`src/lib/api/`) — fixtures + in-memory fake API behind TanStack Query; single swap point (`client.ts`) for real HTTP
+- [x] **Dashboard** — KPI stat tiles + Recharts charts (active-devices trend, status donut, breaches bar); device/fence totals derived from the live API lists
+- [x] **Devices** — searchable/filterable table + create/edit modal (mirrors `CreateDeviceDto`) + delete confirmation, wired to `device-service`'s `/api/v1/device`
+- [x] **Fences** — geofence table + create/edit modal (mirrors `CreateFenceDto`, geometry deferred) + delete confirmation, wired to `device-service`'s `/api/v1/fence`
+- [x] **Real API layer** (`src/lib/api/`) — `http.ts` shared `fetch` wrapper (envelope unwrap, bearer token, error surfacing) backs `client.ts` ("the swap point") for devices, fences, and login; TanStack Query hooks (`hooks.ts`) unchanged
 - [x] Shared UI kit (`src/components/ui/`) — buttons, badges, cards, modal, table, pagination, stat tile, icons, etc.
+- [x] Docker Compose wiring — `dashboard-ui` service, host `:3000` → Vite `:5173`; `VITE_API_PROXY_TARGET` routes `/api` to `device-service`
 
 ## In progress 🚧
 
@@ -36,18 +37,17 @@
 
 ### M2 — Scale, geofences, domain
 - [ ] Render 1,000 device dots without perf degradation
-- [ ] Draw-fence UI (map polygon editor) — fence CRUD UI exists; geometry is currently a placeholder polygon
-- [ ] Swap the typed mock layer (`src/lib/api/client.ts`) for real `dashboard-api` / `device-service` HTTP calls — signatures/return types already match
-- [ ] Real dashboard aggregate/stats endpoint (currently derived client-side from the mock store)
+- [ ] Draw-fence UI (map polygon editor) — fence CRUD is wired to the real API; geometry is currently a client-supplied placeholder polygon (`PLACEHOLDER_GEOMETRY` in `client.ts`) until this lands
+- [ ] Real dashboard aggregate/stats endpoint (KPI totals are live; trend lines are still synthesized client-side)
 
 ### M3 — Alerting, GraphQL, production patterns
 - [ ] Alert feed (consumes `dashboard-api` GraphQL + `realtime-gateway` push)
-- [ ] Wire the login page's submit handler to `realtime-gateway`'s JWT auth endpoint (UI already built in `src/pages/login/`, currently stubbed) and persist the session
+- [ ] Migrate auth from `device-service`'s demo login to `realtime-gateway`'s/`dashboard-api`'s production identity flow (public surface unchanged)
 - [ ] Distributed tracing (`traceparent` propagation on outbound calls)
 
 ## Known gaps / tech debt
 
-- No backing services (`dashboard-api`, `realtime-gateway`) exist yet. The portal runs against a **typed in-memory mock** (`src/lib/api/`) shaped to `device-service`'s DTOs — real data lands by replacing `client.ts` bodies with `fetch`.
-- Auth is a **localStorage shim** (`AuthProvider`) — any valid email + 8+ char password signs in. No real credential check, token, or refresh until the M3 JWT wiring.
-- Dashboard stats (KPIs, trends, breaches) are derived/synthesized client-side — no server aggregate endpoint, and breach counts are illustrative mock data.
-- Mutations (create/edit/delete) persist only in memory for the session; they reset on reload.
+- `dashboard-api` and `realtime-gateway` don't exist yet — devices, fences, and login call `device-service` directly (same-origin `/api/v1/...` via the Vite proxy). This is a deliberate interim wiring, not a mock.
+- Login uses `device-service`'s hardcoded demo credentials (`rancher@herdlink.io` / `herdlink-demo`) — no signup flow or per-operator accounts until a real identity service lands.
+- Dashboard KPI totals (device/fence counts, status breakdown, avg battery) are live; the trend-line charts are still client-synthesized — no time-series aggregate endpoint yet.
+- Fence geometry is a fixed placeholder polygon on create — the map-draw editor (M2) is what lets operators define real boundaries.

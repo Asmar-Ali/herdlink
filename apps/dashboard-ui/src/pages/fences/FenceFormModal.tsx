@@ -95,7 +95,7 @@ export function FenceFormModal({
     <Modal
       open={open}
       onClose={onClose}
-      title={isEdit ? 'Edit geofence' : 'Create geofence'}
+      title={isEdit ? 'Edit Geofence' : 'Create Geofence'}
       description={
         isEdit
           ? 'Update this boundary’s alert rules.'
@@ -107,7 +107,7 @@ export function FenceFormModal({
             Cancel
           </Button>
           <Button type="submit" form="fence-form" disabled={pending}>
-            {pending ? 'Saving…' : isEdit ? 'Save changes' : 'Create geofence'}
+            {pending ? 'Saving…' : isEdit ? 'Save Changes' : 'Create Geofence'}
           </Button>
         </>
       }
@@ -162,7 +162,7 @@ export function FenceFormModal({
         </div>
 
         <div className="grid grid-cols-2 gap-4">
-          <Field label="Breach direction" htmlFor="breachDirection">
+          <Field label="Breach Direction" htmlFor="breachDirection">
             <Select id="breachDirection" {...register('breachDirection')}>
               {Object.values(BreachDirection).map((b) => (
                 <option key={b} value={b}>
@@ -172,7 +172,7 @@ export function FenceFormModal({
             </Select>
           </Field>
           <Field
-            label="Alert cooldown (s)"
+            label="Alert Cooldown (s)"
             htmlFor="alertCooldownSeconds"
             error={errors.alertCooldownSeconds?.message}
           >

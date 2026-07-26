@@ -5,8 +5,8 @@ import { useAuth } from '../../lib/auth/auth-context.ts';
 import { Icon } from '../ui/Icon.tsx';
 
 /**
- * Fixed bottom-right settings control (per the portal spec). Opens a popover
- * above itself with the signed-in user's profile and a logout action.
+ * Sidebar-footer settings control. Opens a popover above itself with the
+ * signed-in user's profile and a logout action.
  */
 export function SettingsMenu() {
   const { user, logout } = useAuth();
@@ -45,14 +45,11 @@ export function SettingsMenu() {
   };
 
   return (
-    <div
-      ref={containerRef}
-      className="fixed bottom-6 right-6 z-40 flex flex-col items-end gap-3"
-    >
+    <div ref={containerRef} className="relative">
       {open && (
         <div
           role="menu"
-          className="w-64 overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--surface)] shadow-[var(--shadow)]"
+          className="absolute bottom-full left-0 right-0 mb-2 overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--surface)] shadow-[var(--shadow)]"
         >
           <div className="flex items-center gap-3 border-b border-[var(--border)] p-4">
             <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--accent-bg)] text-sm font-semibold text-[var(--accent)]">
@@ -90,7 +87,7 @@ export function SettingsMenu() {
               className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-[var(--status-critical)] hover:bg-[color-mix(in_srgb,var(--status-critical)_10%,transparent)]"
             >
               <Icon name="logout" size={18} />
-              Log out
+              Log Out
             </button>
           </div>
         </div>
@@ -98,15 +95,15 @@ export function SettingsMenu() {
 
       <button
         type="button"
-        aria-label="Settings and profile"
+        aria-label="Settings and Profile"
         aria-expanded={open}
         aria-haspopup="menu"
         onClick={() => setOpen((v) => !v)}
-        className={`flex h-12 w-12 items-center justify-center rounded-full border border-[var(--border)] bg-[var(--surface)] text-[var(--text-h)] shadow-[var(--shadow)] transition-colors hover:bg-[var(--surface-2)] ${
+        className={`flex h-10 w-10 items-center justify-center rounded-full border border-[var(--border)] bg-[var(--surface)] text-[var(--text-h)] transition-colors hover:bg-[var(--surface-2)] ${
           open ? 'ring-2 ring-[var(--accent-border)]' : ''
         }`}
       >
-        <Icon name="settings" size={22} />
+        <Icon name="settings" size={20} />
       </button>
     </div>
   );

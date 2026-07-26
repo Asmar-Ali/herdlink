@@ -85,7 +85,7 @@ export function DeviceFormModal({
     <Modal
       open={open}
       onClose={onClose}
-      title={isEdit ? 'Edit device' : 'Register device'}
+      title={isEdit ? 'Edit Device' : 'Register Device'}
       description={
         isEdit
           ? 'Update this collar’s details.'
@@ -97,7 +97,7 @@ export function DeviceFormModal({
             Cancel
           </Button>
           <Button type="submit" form="device-form" disabled={pending}>
-            {pending ? 'Saving…' : isEdit ? 'Save changes' : 'Register device'}
+            {pending ? 'Saving…' : isEdit ? 'Save Changes' : 'Register Device'}
           </Button>
         </>
       }
@@ -109,7 +109,7 @@ export function DeviceFormModal({
         noValidate
       >
         <Field
-          label="Serial number"
+          label="Serial Number"
           htmlFor="serialNumber"
           error={errors.serialNumber?.message}
         >

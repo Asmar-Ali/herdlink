@@ -2,7 +2,7 @@
 
 > Living docs — update in the same change as the code. See [keeping-specs-current](../../../.claude/skills/keeping-specs-current/SKILL.md).
 
-**Responsibility:** REST CRUD management API for devices (GPS collars) and geofences. The authoritative source of device registry and fence definitions for the rest of the platform.
+**Responsibility:** REST CRUD management API for devices (GPS collars) and geofences, plus a demo-only login endpoint that issues JWTs for write access. The authoritative source of device registry and fence definitions for the rest of the platform.
 **Milestone:** M2
 **Tier:** Consumer (REST API)
 **Primary stores:** PostgreSQL (`devices` table) · MongoDB (`geofences` collection)
@@ -19,11 +19,11 @@
 - **If it crashes:** Devices and fences remain in their databases; no data is lost. The dashboard cannot query device/fence metadata; `geofence-engine` cannot refresh its fence cache until service recovers.
 - **If Postgres fails:** Device CRUD returns 503; fence operations unaffected.
 - **If MongoDB fails:** Fence CRUD returns 503; device operations unaffected.
-- **Downstream affected:** `geofence-engine` (reads fences on startup via REST), `dashboard-api` (queries device metadata).
+- **Downstream affected:** `dashboard-ui` (login + device/fence CRUD today), `geofence-engine` (reads fences on startup via REST), `dashboard-api` (planned — queries device metadata).
 
 ## Specs
 
-- [ENDPOINTS.md](./ENDPOINTS.md) — full REST surface (`/api/v1/device`, `/api/v1/fence`)
+- [ENDPOINTS.md](./ENDPOINTS.md) — full REST surface (`/api/v1/auth`, `/api/v1/device`, `/api/v1/fence`)
 - [NETWORK.md](./NETWORK.md) — datastores, ports, env vars, observability
 - [CHANGELOG.md](./CHANGELOG.md) — change history
 - [TODO.md](./TODO.md) — built vs remaining

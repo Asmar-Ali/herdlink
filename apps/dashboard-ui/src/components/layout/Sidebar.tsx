@@ -1,5 +1,6 @@
 import { NavLink } from 'react-router-dom';
 import { Icon, type IconName } from '../ui/Icon.tsx';
+import { SettingsMenu } from './SettingsMenu.tsx';
 
 interface NavItem {
   to: string;
@@ -72,12 +73,11 @@ export function Sidebar({
           ))}
         </nav>
 
-        <div className="border-t border-[var(--border)] p-4 text-[11px] text-[var(--text-muted)]">
-          <div className="flex items-center gap-2">
-            <span className="h-1.5 w-1.5 rounded-full bg-[var(--status-good)]" />
-            device-service · connected
+        <div className="space-y-3 border-t border-[var(--border)] p-4">
+          <SettingsMenu />
+          <div className="text-[11px] text-[var(--text-muted)]">
+            v0.0.0 · milestone M2
           </div>
-          <div className="mt-1">v0.0.0 · milestone M2</div>
         </div>
       </aside>
     </>

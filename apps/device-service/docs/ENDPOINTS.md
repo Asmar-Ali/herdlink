@@ -6,7 +6,28 @@
 > Errors are shaped by the global `HttpExceptionFilter` (not the envelope).
 > Auth: reads are public. All `POST`, `PATCH`, and `DELETE` routes require
 > `Authorization: Bearer <JWT>` with issuer `herdlink`; missing or invalid
-> tokens return `401`.
+> tokens return `401`. Obtain a token via `POST /api/v1/auth/login` (public).
+
+---
+
+## Auth — `/api/v1/auth`
+
+### `POST /api/v1/auth/login`
+Exchange demo operator credentials for a signed JWT + session user.
+Public (`@Public()`). Demo-only hardcoded account until a real identity service
+lands — see [ADR-0002](../../../docs/adr/0002-auth-login-in-device-service.md).
+
+**Body:** `LoginDto`
+
+| Field | Type | Required | Validation |
+|---|---|---|---|
+| `email` | `string` | yes | valid email |
+| `password` | `string` | yes | min 8 chars |
+
+**Demo credentials:** `rancher@herdlink.io` / `herdlink-demo`
+
+**Success:** `200` → `data: { token: string, user: { id, email, name, role } }`
+**Errors:** `400` validation · `401` invalid email or password
 
 ---
 

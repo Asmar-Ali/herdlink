@@ -2,7 +2,7 @@
 # HerdLink — local development infrastructure
 #
 # What's here: stateful infra (databases, brokers, observability) plus the
-# NestJS device-service for local API development.
+# NestJS device-service and Vite dashboard-ui for local development.
 #
 # Quickstart:
 #   docker compose up                # start everything
@@ -20,7 +20,8 @@
 #   8081  Schema Registry
 #   1883  MQTT
 #   9090  Prometheus
-#   3001  Grafana          (3000 left free for dashboard-ui later)
+#   3000  dashboard-ui (Vite on host → 5173 in container)
+#   3001  Grafana
 #   16686 Jaeger UI
 #   4317  Jaeger OTLP gRPC
 #   4318  Jaeger OTLP HTTP
@@ -38,6 +39,7 @@ networks:
 
 volumes:
   device-service-node-modules:
+  dashboard-ui-node-modules:
   timescale-data:
   mongo-data:
   redis-data:
@@ -251,8 +253,9 @@ services:
 
   device-service:
     build:
-      context: ./apps/device-service
-      dockerfile: Dockerfile
+      # Monorepo root — package.json uses file:../../libs/{auth,observability}
+      context: .
+      dockerfile: apps/device-service/Dockerfile
     image: herdlink-device:local
     container_name: herdlink-device
     restart: unless-stopped
@@ -260,11 +263,13 @@ services:
     ports:
       # Host 3002 avoids clashing with a local Nest/other app on 3000
       - "3002:3000"
-    working_dir: /app
+    working_dir: /workspace/apps/device-service
     command: ["npm", "run", "start:dev"]
     volumes:
-      - ./apps/device-service:/app
-      - device-service-node-modules:/app/node_modules
+      # Preserve ../../libs relative to working_dir for file: deps + live reload
+      - ./apps/device-service:/workspace/apps/device-service
+      - ./libs:/workspace/libs
+      - device-service-node-modules:/workspace/apps/device-service/node_modules
     environment:
       PORT: "3000"
       NODE_ENV: development
@@ -285,6 +290,31 @@ services:
         condition: service_healthy
       timescaledb:
         condition: service_healthy
+
+  dashboard-ui:
+    build:
+      context: ./apps/dashboard-ui
+      dockerfile: Dockerfile
+    image: herdlink-dashboard-ui:local
+    container_name: herdlink-dashboard-ui
+    restart: unless-stopped
+    networks: [herdlink]
+    ports:
+      # Host 3000 — reserved for the SPA; Vite listens on 5173 in-container
+      - "3000:5173"
+    working_dir: /app
+    command: ["npm", "run", "dev", "--", "--host", "0.0.0.0", "--port", "5173"]
+    volumes:
+      - ./apps/dashboard-ui:/app
+      - dashboard-ui-node-modules:/app/node_modules
+    environment:
+      NODE_ENV: development
+      # Vite proxies /api → device-service over the compose network (see
+      # apps/dashboard-ui/vite.config.ts). This is how the login flow reaches
+      # the backend without CORS.
+      VITE_API_PROXY_TARGET: http://device-service:3000
+    depends_on:
+      - device-service
 
   # ─── DEVELOPER UIs ──────────────────────────────────────────────────────────
   # Optional but high-value during development. Comment any out if you want a

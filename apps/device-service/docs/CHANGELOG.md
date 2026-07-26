@@ -9,12 +9,21 @@
 
 - Shared `@herdlink/auth` integration with global JWT verification, user/service
   token issuance, and `JWT_SECRET` startup validation.
+- **Demo login** — `POST /api/v1/auth/login` (`AuthModule`) issues a bearer JWT +
+  session user for the hardcoded operator (`rancher@herdlink.io` /
+  `herdlink-demo`). Public endpoint; interim until a dedicated identity flow
+  lands ([ADR-0002](../../../docs/adr/0002-auth-login-in-device-service.md)).
+  Unit + E2E coverage (`auth.controller.spec.ts`, `auth.service.spec.ts`,
+  `test/auth.e2e-spec.ts`).
 - Authentication E2E coverage for missing, malformed, and valid bearer tokens.
 
 ### Changed
 
 - **BREAKING:** Device and fence `POST`, `PATCH`, and `DELETE` routes now require
   a valid bearer JWT. `GET` routes remain public.
+- Docker image build context is the monorepo root so `@herdlink/auth` /
+  `@herdlink/observability` (`file:../../libs/*`) install correctly; compose
+  mounts `./libs` alongside the service for live reload.
 
 ---
 

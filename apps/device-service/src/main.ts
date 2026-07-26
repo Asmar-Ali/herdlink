@@ -1,3 +1,4 @@
+import 'reflect-metadata';
 import './instrument.js';
 import { createNestLogger } from '@herdlink/observability';
 import { NestFactory } from '@nestjs/core';

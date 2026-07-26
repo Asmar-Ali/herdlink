@@ -2,12 +2,13 @@ import { createContext, use } from 'react';
 
 /*
  * Auth context + hook (no components here, so Fast Refresh stays happy). The
- * provider lives in AuthProvider.tsx. Until realtime-gateway's JWT auth endpoint
- * exists (PRD M3), the session is a fake held in localStorage — but this public
- * surface is what the real implementation will expose, so screens won't change.
+ * provider lives in AuthProvider.tsx. `login` posts credentials to
+ * device-service's `POST /api/v1/auth/login`, which returns a signed JWT plus
+ * the operator; both are persisted in localStorage.
  */
 
 export interface AuthUser {
+  id: string;
   email: string;
   name: string;
   role: string;
@@ -15,12 +16,14 @@ export interface AuthUser {
 
 export interface AuthContextValue {
   user: AuthUser | null;
+  token: string | null;
   isAuthenticated: boolean;
-  login: (email: string) => Promise<AuthUser>;
+  login: (email: string, password: string) => Promise<AuthUser>;
   logout: () => void;
 }
 
 export const AUTH_STORAGE_KEY = 'herdlink.session';
+export const AUTH_TOKEN_KEY = 'herdlink.token';
 
 export const AuthContext = createContext<AuthContextValue | null>(null);
 

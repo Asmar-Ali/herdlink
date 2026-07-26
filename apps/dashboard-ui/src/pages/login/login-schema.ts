@@ -10,3 +10,14 @@ export const loginSchema = z.object({
 });
 
 export type LoginFormValues = z.infer<typeof loginSchema>;
+
+/*
+ * There is no signup flow yet: every operator signs in with this shared demo
+ * account, which device-service validates. The login form is pre-filled with
+ * these values so a click-through "just works". Keep in sync with the backend
+ * (apps/device-service/src/auth/auth.service.ts).
+ */
+export const demoCredentials: LoginFormValues = {
+  email: 'rancher@herdlink.io',
+  password: 'herdlink-demo',
+};

@@ -20,12 +20,14 @@
 - [x] Unit tests — controller, service, repository (devices + fences)
 - [x] E2E tests — device flows + fence flows
 - [x] JWT auth on write endpoints via shared `@herdlink/auth`; reads remain public
+- [x] Demo login — `POST /api/v1/auth/login` (hardcoded rancher credentials; interim for `dashboard-ui`)
 
 ---
 
 ## Remaining ⬜
 
 ### M3 — Production patterns
+- [ ] Replace demo login with a real identity flow (`realtime-gateway` / dedicated auth) — public surface of `/api/v1/auth/login` may move
 - [ ] `PATCH /api/v1/device/:id` called by `ingestion-service` to update `lastLatitude`, `lastLongitude`, `lastSeenAt`, `batteryLevel` — define the internal contract first (sync call vs event)
 
 ### M4 — Observability & polish
@@ -38,6 +40,7 @@
 
 ## Known gaps / tech debt
 
+- Login is a single shared demo account (`rancher@herdlink.io` / `herdlink-demo`) — no signup, password hashing, or per-operator accounts ([ADR-0002](../../../docs/adr/0002-auth-login-in-device-service.md)).
 - `UpdateDeviceDto` imports `CreateDeviceDto` without `.js` extension (`import { CreateDeviceDto } from './create-device.dto'`) — inconsistent with ESM convention; harmless in current build but should be corrected.
 - TypeORM `synchronize: true` in non-production — acceptable for portfolio, must be replaced with explicit migrations before any real deployment.
 - No health/readiness endpoints yet — omitted for M2, required by M4 and the `reliability-scalability.mdc` standard.

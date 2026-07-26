@@ -26,7 +26,7 @@ function CustomTooltip({
   const point = payload[0].payload;
   return (
     <TooltipShell label={formatDayShort(point.date)}>
-      <TooltipRow color={color} name="Active devices" value={point.value} />
+      <TooltipRow color={color} name="Active Devices" value={point.value} />
     </TooltipShell>
   );
 }

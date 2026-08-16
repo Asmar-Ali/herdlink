@@ -6,13 +6,13 @@
 
 **Legend:** ✅ Built · 🚧 In progress · ⬜ Not started
 
-_Last reconciled: 2026-07-26_
+_Last reconciled: 2026-08-17_
 
 ## Services
 
 | # | Service | Milestone | Status | Specs | Notes |
 |---|---|---|---|---|---|
-| 1 | `device-simulator` | M1 | ⬜ Not started | — | |
+| 1 | `device-simulator` | M1 | ✅ Built | [docs](../apps/device-simulator/docs/) | Single simulated collar (`SIM-000001`); publishes to `herdlink/telemetry/<deviceId>` over MQTT every 30s; multi-device fan-out is M2 |
 | 2 | `mqtt-bridge` | M1 | ⬜ Not started | — | |
 | 3 | `ingestion-service` | M1 | ⬜ Not started | — | |
 | 4 | `geofence-engine` | M2 | ⬜ Not started | — | |
@@ -45,7 +45,7 @@ _Last reconciled: 2026-07-26_
 
 | Milestone | Goal | Status |
 |---|---|---|
-| M1 — Walking skeleton | One device end-to-end onto a map | ⬜ Not started |
+| M1 — Walking skeleton | One device end-to-end onto a map | 🚧 In progress (device-simulator done; mqtt-bridge, ingestion-service, realtime-gateway remain) |
 | M2 — Scale, geofences, domain | 1,000 devices; fences detect breaches | 🚧 In progress (device-service done) |
 | M3 — Alerting, GraphQL, production patterns | Full alerting; dashboard ops tool; graceful failure | ⬜ Not started |
 | M4 — Observability, load testing, polish | System tells its own story | ⬜ Not started |

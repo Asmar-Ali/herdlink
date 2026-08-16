@@ -1,0 +1,59 @@
+{
+  "name": "device-simulator",
+  "version": "0.0.1",
+  "description": "Simulates a single GPS collar publishing telemetry over MQTT",
+  "author": "",
+  "private": true,
+  "license": "UNLICENSED",
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "start": "node dist/main.js",
+    "start:dev": "tsx watch src/main.ts",
+    "lint": "eslint \"src/**/*.ts\" --fix",
+    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
+    "test:watch": "npm test -- --watch"
+  },
+  "dependencies": {
+    "@herdlink/observability": "file:../../libs/observability",
+    "mqtt": "^5.10.3",
+    "ulid": "^3.0.0"
+  },
+  "devDependencies": {
+    "@eslint/eslintrc": "^3.2.0",
+    "@eslint/js": "^9.18.0",
+    "@types/jest": "^30.0.0",
+    "@types/node": "^24.0.0",
+    "eslint": "^9.18.0",
+    "eslint-config-prettier": "^10.0.1",
+    "eslint-plugin-prettier": "^5.2.2",
+    "globals": "^17.0.0",
+    "jest": "^30.0.0",
+    "prettier": "^3.4.2",
+    "ts-jest": "^29.2.5",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.3",
+    "typescript-eslint": "^8.20.0"
+  },
+  "jest": {
+    "preset": "ts-jest/presets/default-esm",
+    "extensionsToTreatAsEsm": [
+      ".ts"
+    ],
+    "moduleNameMapper": {
+      "^@herdlink/observability$": "<rootDir>/../../../libs/observability/src/index.ts",
+      "^@herdlink/observability/instrumentation$": "<rootDir>/../../../libs/observability/src/instrumentation.ts",
+      "^(\\.{1,2}/.*)\\.js$": "$1"
+    },
+    "testEnvironment": "node",
+    "rootDir": "src",
+    "transform": {
+      "^.+\\.tsx?$": [
+        "ts-jest",
+        {
+          "useESM": true
+        }
+      ]
+    }
+  }
+}

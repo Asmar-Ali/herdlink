@@ -27,6 +27,7 @@
 #   4318  Jaeger OTLP HTTP
 #   8080  Kafka UI
 #   3002  device-service (NestJS on host → 3000 in container)
+#   3010  device-simulator (health check)
 #   8082  mongo-express
 #   8083  pgAdmin
 # ─────────────────────────────────────────────────────────────────────────────
@@ -50,6 +51,7 @@ volumes:
   pgadmin-data:
   mosquitto-data:
   mosquitto-log:
+  device-simulator-node-modules:
 
 services:
 
@@ -179,23 +181,23 @@ services:
   #     retries: 5
   #     start_period: 20s
 
-  # mosquitto:
-  #   image: eclipse-mosquitto:2.1-alpine
-  #   container_name: herdlink-mosquitto
-  #   restart: unless-stopped
-  #   networks: [herdlink]
-  #   ports:
-  #     - "1883:1883"   # MQTT
-  #     - "9001:9001"   # MQTT over websockets (optional, useful for debugging)
-  #   volumes:
-  #     - ./infra/mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
-  #     - mosquitto-data:/mosquitto/data
-  #     - mosquitto-log:/mosquitto/log
-  #   healthcheck:
-  #     test: ["CMD", "mosquitto_sub", "-h", "localhost", "-t", "$$SYS/#", "-C", "1", "-W", "3"]
-  #     interval: 15s
-  #     timeout: 5s
-  #     retries: 3
+  mosquitto:
+    image: eclipse-mosquitto:2.1-alpine
+    container_name: herdlink-mosquitto
+    restart: unless-stopped
+    networks: [herdlink]
+    ports:
+      - "1883:1883"   # MQTT
+      - "9001:9001"   # MQTT over websockets (optional, useful for debugging)
+    volumes:
+      - ./infra/mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+      - mosquitto-data:/mosquitto/data
+      - mosquitto-log:/mosquitto/log
+    healthcheck:
+      test: ["CMD", "mosquitto_sub", "-h", "localhost", "-t", "$$SYS/#", "-C", "1", "-W", "3"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
 
   # ─── OBSERVABILITY ──────────────────────────────────────────────────────────
 
@@ -250,6 +252,39 @@ services:
   #   command: ["--config", "/tmp/jaeger-config.yaml"]
 
   # ─── APPLICATION ────────────────────────────────────────────────────────────
+
+  device-simulator:
+    build:
+      # Monorepo root — package.json uses file:../../libs/observability
+      context: .
+      dockerfile: apps/device-simulator/Dockerfile
+    image: herdlink-device-simulator:local
+    container_name: herdlink-device-simulator
+    restart: unless-stopped
+    networks: [herdlink]
+    ports:
+      - "3010:3010"
+    working_dir: /workspace/apps/device-simulator
+    command: ["npm", "run", "start:dev"]
+    volumes:
+      # Preserve ../../libs relative to working_dir for file: deps + live reload
+      - ./apps/device-simulator:/workspace/apps/device-simulator
+      - ./libs:/workspace/libs
+      - device-simulator-node-modules:/workspace/apps/device-simulator/node_modules
+    environment:
+      NODE_ENV: development
+      MQTT_BROKER_URL: mqtt://mosquitto:1883
+      DEVICE_SERIAL_NUMBER: SIM-000001
+      DEVICE_HERD_ID: herd-demo-1
+      PUBLISH_INTERVAL_MS: "30000"
+      START_LAT: "-37.796"
+      START_LNG: "144.904"
+      WALK_STEP_DEGREES: "0.0001"
+      HEALTH_PORT: "3010"
+      LOG_LEVEL: info
+    depends_on:
+      mosquitto:
+        condition: service_healthy
 
   device-service:
     build:

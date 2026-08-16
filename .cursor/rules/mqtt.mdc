@@ -1,0 +1,34 @@
+---
+description: MQTT topic scheme, QoS/retain conventions, and client-ID rules for HerdLink edge/bridge services
+globs: apps/**/*mqtt*.ts,apps/**/mqtt/**/*.ts
+alwaysApply: false
+---
+
+# MQTT Conventions
+
+## Client
+- `mqtt.js` for Node services. One client per process.
+- Rely on `mqtt.js`'s built-in auto-reconnect (default behaviour) for baseline resilience. Don't build custom retry/backoff logic on top of it unless a real requirement forces it.
+
+## Topics (HerdLink-specific)
+| Topic pattern | Purpose | Direction |
+|---|---|---|
+| `herdlink/telemetry/<deviceId>` | Per-device collar telemetry | `device-simulator` publishes, `mqtt-bridge` subscribes (wildcard `herdlink/telemetry/#`) |
+
+Per-device topics (not one shared topic) so future consumers can wildcard-subscribe and per-device ACLs are possible without a redesign.
+
+## QoS and retain
+- **QoS 1** (at-least-once) for telemetry — consistent with the platform's idempotent-consumer philosophy already established in `kafka.mdc`. Downstream consumers (`mqtt-bridge`) must dedupe, same as any Kafka consumer.
+- **Retain: false** — telemetry is a stream, not last-known-state. Last-known-position is a domain concern (`device-service`'s denormalised `lastLatitude`/`lastLongitude`/`lastSeenAt`), not an MQTT retained-message concern.
+
+## Client ID
+- `<service-name>-<identifier>`, e.g. `device-simulator-SIM-000001`. Deterministic and traceable back to the publishing process in broker logs.
+
+## Correlation ID
+- MQTT has no first-class headers. `correlationId` (a ULID) travels **inside the payload**, not as a separate header or property. Every consumer that forwards this data onward (e.g. `mqtt-bridge` → Kafka) must read it from the payload and propagate it into whatever header/context mechanism the next hop uses.
+
+## Last-will
+- Document last-will intent in the service's `NETWORK.md` even if not wired yet. Only wire it once a downstream consumer actually needs to react to an ungraceful disconnect (offline/reconnect handling is a real feature, not a checkbox).
+
+## Health
+- A service with no other HTTP surface still needs a liveness probe. Use Node's built-in `http` module for a single `/health` route reflecting the MQTT client's connection state — don't pull in a framework for one route.

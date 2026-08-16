@@ -1,6 +1,6 @@
 # HerdLink
 
-Real-time IoT telemetry & geofencing platform for connected livestock fleets — a 9-service, event-driven monorepo built to production-grade standards. **Only `device-service` is built so far.**
+Real-time IoT telemetry & geofencing platform for connected livestock fleets — a 9-service, event-driven monorepo built to production-grade standards. **Built so far: `device-service`, `device-simulator`.**
 
 - **What & why:** [docs/PRD.md](./docs/PRD.md) (canonical) · [HerdLink_Project_Plan.pdf](./HerdLink_Project_Plan.pdf) (original blueprint) · [README.md](./README.md) (public pitch)
 - **What's built vs remaining:** [docs/ROADMAP.md](./docs/ROADMAP.md) · per-service `apps/<service>/docs/TODO.md`
@@ -9,7 +9,7 @@ Real-time IoT telemetry & geofencing platform for connected livestock fleets —
 ## Repo map
 
 ```
-apps/            # the 9 services (mostly NestJS; dashboard-ui is React+Vite). Built: device-service. In progress: dashboard-ui (scaffolded). Rest: not started.
+apps/            # the 9 services (mostly NestJS; dashboard-ui is React+Vite; device-simulator is a plain Node/TS script). Built: device-service, device-simulator. In progress: dashboard-ui (scaffolded). Rest: not started.
 libs/            # shared: kafka-client, observability, contracts (not started)
 docs/            # PRD, ROADMAP, lifecycle, ADRs, per-service-spec templates
 .cursor/rules/   # engineering standards — THE SINGLE SOURCE OF TRUTH (see below)
@@ -29,6 +29,7 @@ The `.cursor/rules/*.mdc` files are the **authoritative, detailed standards**. S
 | Postgres / TimescaleDB queries, migrations, repos | [`.cursor/rules/sql.mdc`](./.cursor/rules/sql.mdc) |
 | Polyglot persistence, data modeling, ownership | [`.cursor/rules/database-design.mdc`](./.cursor/rules/database-design.mdc) |
 | Kafka producers/consumers, topics, schemas, DLQ | [`.cursor/rules/kafka.mdc`](./.cursor/rules/kafka.mdc) |
+| MQTT topics, QoS/retain, client IDs (edge/bridge services) | [`.cursor/rules/mqtt.mdc`](./.cursor/rules/mqtt.mdc) |
 | Idempotency, outbox, sagas, tracing, consistency | [`.cursor/rules/distributed-systems.mdc`](./.cursor/rules/distributed-systems.mdc) |
 | Observability, SLOs, backpressure, degradation, load | [`.cursor/rules/reliability-scalability.mdc`](./.cursor/rules/reliability-scalability.mdc) |
 

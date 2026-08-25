@@ -1,4 +1,4 @@
-import type { Position } from "./telemetry-message.js";
+import type { Position } from "@herdlink/contracts";
 
 export type RandomFn = () => number;
 

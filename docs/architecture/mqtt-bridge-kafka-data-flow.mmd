@@ -1,0 +1,59 @@
+%% HerdLink MQTT bridge and telemetry data flow
+flowchart LR
+    subgraph EDGE["Edge / Device Layer"]
+        SIM["device-simulator<br/>Generates GPS telemetry"]
+    end
+
+    subgraph MQTT["MQTT Layer"]
+        BROKER[("Mosquitto MQTT Broker")]
+        TOPIC["herdlink/telemetry/{deviceId}"]
+    end
+
+    subgraph BRIDGE["Protocol Bridge"]
+        MB["mqtt-bridge<br/>Subscribe → validate → normalize"]
+    end
+
+    subgraph KAFKA["Kafka Event Backbone"]
+        RAW{{"telemetry.raw<br/>12 partitions<br/>key: device_id"}}
+        ALERTS{{"alerts.breaches<br/>6 partitions<br/>key: device_id"}}
+        RAWDLQ{{"telemetry.raw.dlq"}}
+    end
+
+    subgraph PROCESSING["Telemetry Processing"]
+        ING["ingestion-service<br/>Kafka consumer"]
+        GEO["geofence-engine<br/>Kafka consumer"]
+        ALERT["alerting-service<br/>Kafka consumer"]
+    end
+
+    subgraph STORAGE["Data Stores"]
+        TS[("TimescaleDB<br/>Historical telemetry")]
+        REDIS[("Redis<br/>Live positions / GEO / PubSub")]
+        MONGO[("MongoDB<br/>Fences and alerts")]
+    end
+
+    subgraph DELIVERY["Live Dashboard Delivery"]
+        RT["realtime-gateway<br/>WebSocket server"]
+        UI["dashboard-ui<br/>Live map and alerts"]
+    end
+
+    SIM -->|"MQTT publish<br/>QoS 1, retain false"| BROKER
+    BROKER --> TOPIC
+    TOPIC -->|"Wildcard subscribe<br/>herdlink/telemetry/#"| MB
+
+    MB -->|"Avro event<br/>acks: all<br/>traceparent + correlationId"| RAW
+    MB -.->|"Invalid or permanently failed messages"| RAWDLQ
+
+    RAW -->|"Consumer group: ingestion-service"| ING
+    ING -->|"Append telemetry"| TS
+
+    RAW -->|"Consumer group: geofence-engine"| GEO
+    GEO -->|"Update/query live position"| REDIS
+    GEO -->|"Read fence definitions"| MONGO
+    GEO -->|"Detected breach"| ALERTS
+
+    ALERTS -->|"Consumer group: alerting-service"| ALERT
+    ALERT -->|"Persist alert"| MONGO
+    ALERT -->|"Outbox-driven publish"| REDIS
+
+    REDIS -->|"Pub/Sub alert and position events"| RT
+    RT -->|"WebSocket push"| UI

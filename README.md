@@ -55,7 +55,10 @@ The dashboard renders 1,000 cattle moving across simulated paddocks. Draw a fenc
 
 ## Architecture
 
-![architecture](./docs/architecture.png)
+The architecture diagrams are maintained as Mermaid source in
+[`docs/architecture/`](./docs/architecture/). The current telemetry flow is
+documented in
+[`mqtt-bridge-kafka-data-flow.mmd`](./docs/architecture/mqtt-bridge-kafka-data-flow.mmd).
 
 Five tiers, single direction of data flow, every service does one thing well.
 

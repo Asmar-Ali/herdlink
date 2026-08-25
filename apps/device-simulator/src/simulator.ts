@@ -2,10 +2,7 @@ import { ulid } from "ulid";
 import type { Logger } from "@herdlink/observability";
 import { nextPosition } from "./telemetry/gps-walk.js";
 import { nextBatteryLevel } from "./telemetry/battery.js";
-import type {
-  Position,
-  TelemetryMessage,
-} from "./telemetry/telemetry-message.js";
+import type { Position, TelemetryMessage } from "@herdlink/contracts";
 import type { MqttPublisher } from "./mqtt/mqtt-publisher.js";
 
 export interface SimulatorOptions {

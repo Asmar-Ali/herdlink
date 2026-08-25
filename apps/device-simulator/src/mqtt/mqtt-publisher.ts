@@ -1,6 +1,6 @@
 import mqtt, { type MqttClient } from "mqtt";
 import type { Logger } from "@herdlink/observability";
-import type { TelemetryMessage } from "../telemetry/telemetry-message.js";
+import type { TelemetryMessage } from "@herdlink/contracts";
 
 export interface MqttPublisherOptions {
   brokerUrl: string;

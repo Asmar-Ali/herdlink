@@ -2,7 +2,7 @@ import { EventEmitter } from "node:events";
 import { describe, expect, it, jest } from "@jest/globals";
 import type { Logger } from "@herdlink/observability";
 import { MqttPublisher } from "./mqtt-publisher.js";
-import type { TelemetryMessage } from "../telemetry/telemetry-message.js";
+import type { TelemetryMessage } from "@herdlink/contracts";
 
 type PublishCallback = (error?: Error) => void;
 type EndCallback = () => void;

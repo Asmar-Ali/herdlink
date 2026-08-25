@@ -9,7 +9,7 @@ import {
 import type { Logger } from "@herdlink/observability";
 import { Simulator } from "./simulator.js";
 import type { MqttPublisher } from "./mqtt/mqtt-publisher.js";
-import type { TelemetryMessage } from "./telemetry/telemetry-message.js";
+import type { TelemetryMessage } from "@herdlink/contracts";
 
 function createLogger(): Logger {
   return {

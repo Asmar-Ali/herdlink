@@ -29,7 +29,7 @@ _Last reconciled: 2026-08-17_
 | `auth` | ✅ Built | Shared JWT verification and issuance — [`libs/auth/`](../libs/auth/) |
 | `kafka-client` | ⬜ Not started | Kafka utilities + schema registry |
 | `observability` | ✅ Built | Pino + OpenTelemetry setup — [`libs/observability/`](../libs/observability/) |
-| `contracts` | ⬜ Not started | Shared types + Avro schemas |
+| `contracts` | 🚧 In progress | `TelemetryMessage`/`Position` moved out of `device-simulator` — [`libs/contracts/`](../libs/contracts/); `mqtt-bridge` will be its second consumer; Avro schemas deferred to M2 |
 
 ## Cross-cutting infrastructure
 

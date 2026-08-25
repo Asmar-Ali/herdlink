@@ -10,3 +10,6 @@
 - `GET /health` liveness endpoint (200 while MQTT connected, 503 otherwise).
 - Unit tests for `nextPosition`, `nextBatteryLevel`, `MqttPublisher`, and `Simulator`.
 - Docker Compose wiring — `device-simulator` service, Mosquitto uncommented and brought online as a dependency.
+
+### Changed
+- `TelemetryMessage`/`Position` moved out of this service and into `@herdlink/contracts`, now that `mqtt-bridge` needs to share the same shape. No behavior change — same wire format.

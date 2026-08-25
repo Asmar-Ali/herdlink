@@ -4,7 +4,8 @@ FROM node:22-alpine
 
 WORKDIR /workspace
 
-# Shared libs first — npm install follows file:../../libs/observability
+# Shared libs first — npm install follows file:../../libs/{contracts,observability}
+COPY libs/contracts ./libs/contracts
 COPY libs/observability ./libs/observability
 
 COPY apps/device-simulator/package.json apps/device-simulator/package-lock.json ./apps/device-simulator/

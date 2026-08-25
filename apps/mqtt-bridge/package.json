@@ -1,7 +1,7 @@
 {
-  "name": "device-simulator",
+  "name": "mqtt-bridge",
   "version": "0.0.1",
-  "description": "Simulates a single GPS collar publishing telemetry over MQTT",
+  "description": "Bridges device telemetry from MQTT to Kafka's telemetry.raw topic",
   "author": "",
   "private": true,
   "license": "UNLICENSED",
@@ -17,8 +17,8 @@
   "dependencies": {
     "@herdlink/contracts": "file:../../libs/contracts",
     "@herdlink/observability": "file:../../libs/observability",
-    "mqtt": "^5.10.3",
-    "ulid": "^3.0.0"
+    "kafkajs": "^2.2.4",
+    "mqtt": "^5.10.3"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.2.0",
